@@ -4,6 +4,15 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signUpWithEmail } from '@/lib/firebase/auth';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Mail, Lock, User, Building2, AlertCircle, Hotel, Loader2, Sparkles } from 'lucide-react';
 
 export default function SignupPage() {
   const [name, setName] = useState('');
@@ -22,7 +31,6 @@ export default function SignupPage() {
     setIsSubmitting(true);
 
     try {
-      // Validate passwords match
       if (password !== confirmPassword) {
         setError('Passwords do not match');
         setIsSubmitting(false);
@@ -35,11 +43,9 @@ export default function SignupPage() {
         return;
       }
 
-      // Sign up with Firebase
       const userCredential = await signUpWithEmail(email, password);
       const firebaseUser = userCredential.user;
 
-      // Sync with database
       const response = await fetch('/api/auth/sync', {
         method: 'POST',
         headers: {
@@ -61,7 +67,6 @@ export default function SignupPage() {
         throw new Error(data.error || 'Failed to create account');
       }
 
-      // Redirect to home page
       router.push('/');
     } catch (err: any) {
       setError(err.message || 'An error occurred during signup');
@@ -72,219 +77,168 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* LEFT SIDE - Brand Showcase (40%) */}
-      <div className="hidden lg:flex lg:w-2/5 bg-gradient-to-br from-[#000814] via-[#001d3d] to-[#003566] relative overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-8 bg-background overflow-y-auto">
+      <div className="w-full max-w-md my-8">
+        {/* Logo */}
+        <div className="mb-8 text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Hotel className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">HospitalityAI</h1>
+          </div>
+          <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+            <Sparkles className="w-3 h-3 mr-1" />
+            AI-Powered Training
+          </Badge>
         </div>
 
-        <div className="relative z-10 flex flex-col justify-between p-12 text-white w-full">
-          <div>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/20">
-                <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              </div>
-              <h1 className="text-3xl font-bold">HospitalityAI</h1>
-            </div>
-            <p className="text-lg text-cyan-100 font-light">
-              AI-Powered Training for Hospitality Excellence
-            </p>
-          </div>
-
-          <div className="space-y-6">
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
-              <h3 className="text-xl font-semibold mb-3">Get Started in Minutes</h3>
-              <ul className="space-y-2 text-cyan-100/80">
-                <li className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-cyan-300" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  Create your organization
-                </li>
-                <li className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-cyan-300" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  Invite your team members
-                </li>
-                <li className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-cyan-300" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  Start training immediately
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="text-cyan-100/60 text-sm">
-            Join leading hospitality organizations worldwide
-          </div>
-        </div>
-      </div>
-
-      {/* RIGHT SIDE - Signup Form (60%) */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-slate-950 overflow-y-auto">
-        <div className="w-full max-w-md">
-          <div className="lg:hidden mb-8 text-center">
-            <h1 className="text-3xl font-bold text-slate-100">HospitalityAI</h1>
-            <p className="text-slate-400 mt-2">Training Platform</p>
-          </div>
-
-          <div className="bg-slate-950">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-slate-100 mb-2">
+          <Card className="border-border shadow-xl">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-3xl font-bold">
                 Create Your Account
-              </h2>
-              <p className="text-slate-300">Start training your team with AI-powered scenarios</p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Name Input */}
-              <div>
-                <label htmlFor="name" className="block text-sm font-semibold text-slate-300 mb-2">
-                  Full Name
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  placeholder="John Doe"
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100 placeholder:text-slate-500"
-                />
-              </div>
-
-              {/* Email Input */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-semibold text-slate-300 mb-2">
-                  Email Address
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder="john@hotel.com"
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100 placeholder:text-slate-500"
-                />
-              </div>
-
-              {/* Password Input */}
-              <div>
-                <label htmlFor="password" className="block text-sm font-semibold text-slate-300 mb-2">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder="At least 6 characters"
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100 placeholder:text-slate-500"
-                />
-              </div>
-
-              {/* Confirm Password */}
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-semibold text-slate-300 mb-2">
-                  Confirm Password
-                </label>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  placeholder="Repeat your password"
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100 placeholder:text-slate-500"
-                />
-              </div>
-
-              {/* Organization Name */}
-              <div>
-                <label htmlFor="organizationName" className="block text-sm font-semibold text-slate-300 mb-2">
-                  Organization Name
-                </label>
-                <input
-                  id="organizationName"
-                  type="text"
-                  value={organizationName}
-                  onChange={(e) => setOrganizationName(e.target.value)}
-                  required
-                  placeholder="Grand Hotel"
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100 placeholder:text-slate-500"
-                />
-              </div>
-
-              {/* Organization Type */}
-              <div>
-                <label htmlFor="organizationType" className="block text-sm font-semibold text-slate-300 mb-2">
-                  Organization Type
-                </label>
-                <select
-                  id="organizationType"
-                  value={organizationType}
-                  onChange={(e) => setOrganizationType(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100"
-                >
-                  <option value="hotel">Hotel</option>
-                  <option value="restaurant">Restaurant</option>
-                  <option value="resort">Resort</option>
-                  <option value="spa">Spa</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              {/* Error Message */}
-              {error && (
-                <div className="bg-red-950/50 border-l-4 border-red-500 p-4 rounded-lg">
-                  <div className="flex items-start">
-                    <svg className="w-5 h-5 text-red-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                    <p className="ml-3 text-sm text-red-300">{error}</p>
+              </CardTitle>
+              <CardDescription>Start training your team with AI-powered scenarios</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Name Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="name"
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      placeholder="John Doe"
+                      className="pl-10"
+                    />
                   </div>
                 </div>
-              )}
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-[#8B0000] hover:bg-[#6B0000] text-white py-3.5 rounded-xl font-semibold focus:ring-4 focus:ring-[#8B0000]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-[#8B0000]/20"
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Creating Account...
-                  </span>
-                ) : (
-                  'Create Account'
+                {/* Email Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      placeholder="john@hotel.com"
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                {/* Password Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      placeholder="At least 6 characters"
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                {/* Confirm Password */}
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      placeholder="Repeat your password"
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                {/* Organization Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="organizationName">Organization Name</Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="organizationName"
+                      type="text"
+                      value={organizationName}
+                      onChange={(e) => setOrganizationName(e.target.value)}
+                      required
+                      placeholder="Grand Hotel"
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                {/* Organization Type */}
+                <div className="space-y-2">
+                  <Label htmlFor="organizationType">Organization Type</Label>
+                  <Select value={organizationType} onValueChange={setOrganizationType}>
+                    <SelectTrigger id="organizationType">
+                      <SelectValue placeholder="Select organization type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hotel">Hotel</SelectItem>
+                      <SelectItem value="restaurant">Restaurant</SelectItem>
+                      <SelectItem value="resort">Resort</SelectItem>
+                      <SelectItem value="spa">Spa</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Error Message */}
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
                 )}
-              </button>
-            </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-slate-400">
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating Account...
+                    </>
+                  ) : (
+                    'Create Account'
+                  )}
+                </Button>
+              </form>
+
+              <Separator className="my-6" />
+              <p className="text-sm text-center text-muted-foreground">
                 Already have an account?{' '}
-                <Link href="/login" className="text-[#8B0000] hover:text-[#6B0000] font-semibold">
+                <Link href="/login" className="text-primary hover:underline font-semibold">
                   Sign In
                 </Link>
               </p>
-            </div>
-          </div>
-        </div>
+            </CardContent>
+          </Card>
       </div>
     </div>
   );

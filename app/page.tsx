@@ -11,6 +11,13 @@ import ContinueTraining from '@/components/trainee/ContinueTraining';
 import { Scenario } from '@/lib/types/scenario';
 import { TrainingSession } from '@/lib/types/session';
 import { useAuthContext } from '@/lib/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Hotel, LogOut, Plus, User, Settings, Sparkles } from 'lucide-react';
 
 export default function Home() {
   const [allScenarios, setAllScenarios] = useState<Scenario[]>([]);
@@ -95,16 +102,23 @@ export default function Home() {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-[#8B0000] to-[#6B0000] rounded-3xl mb-6 shadow-2xl shadow-[#8B0000]/40 animate-pulse">
-            <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-          <p className="text-white font-semibold text-lg">Loading your dashboard...</p>
-          <p className="text-slate-400 text-sm mt-2">Please wait</p>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-12 w-12 rounded-xl" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -115,115 +129,150 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-slate-900 border-b border-slate-700 sticky top-0 z-40 shadow-sm backdrop-blur-md bg-slate-900/90">
+      <header className="border-b sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-[#8B0000] to-[#6B0000] rounded-xl shadow-lg shadow-[#8B0000]/20">
-                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
+                <Hotel className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-100">
+                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                   HospitalityAI
                 </h1>
-                <p className="text-xs text-slate-400">
-                  AI-Powered Training Platform
-                </p>
+                <Badge variant="secondary" className="text-xs">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  AI Training
+                </Badge>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="hidden sm:block text-right px-4 py-2 bg-slate-800 rounded-xl border border-slate-700">
-                <p className="text-sm font-bold text-slate-100">{user?.name}</p>
-                <p className="text-xs text-slate-400">{user?.role}{user?.isOrgAdmin && ' • Org Admin'}</p>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] rounded-xl transition-all shadow-lg shadow-[#8B0000]/20 hover:shadow-xl hover:shadow-[#8B0000]/30"
-              >
-                Sign Out
-              </button>
+            <div className="flex items-center gap-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src="" alt={user?.name} />
+                      <AvatarFallback className="bg-gradient-to-br from-blue-600 to-indigo-600 text-white">
+                        {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user?.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user?.role}{user?.isOrgAdmin && ' • Org Admin'}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Welcome Message */}
-        <div className="mb-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
+        <div className="space-y-2">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
             Welcome back, {user?.name?.split(' ')[0]}!
           </h2>
-          <p className="text-slate-400">Continue your training journey and improve your hospitality skills</p>
+          <p className="text-muted-foreground text-lg">Continue your training journey and improve your hospitality skills</p>
         </div>
 
         {/* Progress Overview */}
-        {!sessionsLoading && (
-          <div className="mb-8">
-            <ProgressOverview sessions={userSessions} />
-          </div>
-        )}
+        {!sessionsLoading && <ProgressOverview sessions={userSessions} />}
 
         {/* Continue Training Section */}
         {!sessionsLoading && userSessions.some(s => s.status === 'in_progress') && (
-          <div className="mb-8">
-            <ContinueTraining sessions={userSessions} scenarios={allScenarios} />
-          </div>
+          <ContinueTraining sessions={userSessions} scenarios={allScenarios} />
         )}
 
         {/* Two Column Layout - Recent Sessions & Improvement Areas */}
         {!sessionsLoading && userSessions.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <RecentSessions sessions={userSessions} scenarios={allScenarios} />
             <ImprovementAreas sessions={userSessions} scenarios={allScenarios} />
           </div>
         )}
+
         {/* Scenarios Section */}
-        <div className="mb-12">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-bold text-slate-100 mb-2">
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-1">
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
                 Available Training Scenarios
               </h2>
-              <p className="text-slate-400">Select a scenario to begin your practice session</p>
+              <p className="text-muted-foreground">Select a scenario to begin your practice session</p>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="px-4 py-2 bg-slate-800 rounded-xl border border-slate-700">
-                <span className="text-sm font-semibold text-slate-300">{allScenarios.length} scenarios</span>
-              </div>
-              <Link
-                href="/scenarios/create"
-                className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white rounded-xl font-bold transition-all shadow-lg shadow-[#8B0000]/20 hover:shadow-xl hover:shadow-[#8B0000]/30"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Create Scenario
-              </Link>
+            <div className="flex items-center gap-3">
+              <Badge variant="secondary" className="px-3 py-1">
+                {allScenarios.length} scenarios
+              </Badge>
+              <Button asChild className="gap-2">
+                <Link href="/scenarios/create">
+                  <Plus className="h-4 w-4" />
+                  Create Scenario
+                </Link>
+              </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {allScenarios.map((scenario) => (
-              <ScenarioCard
-                key={scenario.id}
-                scenario={scenario}
-                previousSessions={userSessions}
-              />
-            ))}
-          </div>
+          {allScenarios.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Hotel className="h-12 w-12 text-muted-foreground mb-4" />
+                <CardTitle className="mb-2">No scenarios available</CardTitle>
+                <CardDescription className="text-center mb-4">
+                  Get started by creating your first training scenario
+                </CardDescription>
+                <Button asChild>
+                  <Link href="/scenarios/create">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Scenario
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {allScenarios.map((scenario) => (
+                <ScenarioCard
+                  key={scenario.id}
+                  scenario={scenario}
+                  previousSessions={userSessions}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="bg-slate-900 border-t border-slate-800 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <footer className="border-t mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
-            <p className="text-slate-400 text-sm">
+            <p className="text-muted-foreground text-sm">
               © 2025 HospitalityAI Training Platform. Trusted by leading hospitality organizations worldwide.
             </p>
           </div>
