@@ -114,14 +114,6 @@ export default function ScenarioCard({ scenario, previousSessions = [] }: Scenar
                 </p>
               </div>
             </div>
-            <span
-              className={`px-4 py-2 rounded-xl text-xs font-bold border-2 flex items-center gap-2 flex-shrink-0 shadow-sm ${
-                difficultyColors[scenario.difficulty]
-              }`}
-            >
-              <span className="text-base leading-none">{difficultyIcons[scenario.difficulty]}</span>
-              {scenario.difficulty.charAt(0).toUpperCase() + scenario.difficulty.slice(1)}
-            </span>
           </div>
 
           {/* Context Preview */}

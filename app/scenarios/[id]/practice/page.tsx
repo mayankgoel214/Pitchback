@@ -43,7 +43,7 @@ export default function PracticeSessionPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const { employee } = useAuthContext();
+  const { user: employee } = useAuthContext();
 
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [scenarioLoading, setScenarioLoading] = useState(true);
@@ -53,6 +53,7 @@ export default function PracticeSessionPage() {
   const [turnCount, setTurnCount] = useState(0);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isEndingSession, setIsEndingSession] = useState(false);
 
   // Voice interaction states
   const [isListening, setIsListening] = useState(false);
@@ -76,6 +77,7 @@ export default function PracticeSessionPage() {
   const audioChunksRef = useRef<Blob[]>([]);
   const isManuallyStoppingRef = useRef(false);
   const isListeningRef = useRef(false);
+  const currentTranscriptRef = useRef<string>('');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -131,11 +133,19 @@ export default function PracticeSessionPage() {
             }
           }
 
-          setCurrentTranscript(finalTranscript || interimTranscript);
+          const transcript = finalTranscript || interimTranscript;
+          setCurrentTranscript(transcript);
+          currentTranscriptRef.current = transcript;
         };
 
         recognition.onerror = (event: any) => {
+          // If we're manually stopping, ignore the error - it's expected
+          if (isManuallyStoppingRef.current) {
+            return;
+          }
+
           console.error('Speech recognition error:', event.error);
+
           // Don't automatically restart on error
           if (recognitionRef.current && isListeningRef.current) {
             try {
@@ -181,31 +191,31 @@ export default function PracticeSessionPage() {
     };
   }, []);
 
-  useEffect(() => {
-    if (scenario && !sessionStarted && !scenarioLoading && employee) {
-      initializeSession();
-    }
-  }, [scenario, sessionStarted, scenarioLoading, employee]);
+  // Removed auto-initialization to prevent browser autoplay blocking
+  // User must click "Start Session" button to begin
 
   const initializeSession = async () => {
-    if (!scenario || !employee) return;
+    if (!scenario) return;
 
-    try {
-      const response = await fetch('/api/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          scenario_id: scenario.id,
-          trainee_id: employee.id,
-        }),
-      });
+    // Only create a database session if user is logged in
+    if (employee) {
+      try {
+        const response = await fetch('/api/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scenario_id: scenario.id,
+            trainee_id: employee.id,
+          }),
+        });
 
-      const data = await response.json();
-      if (data.success) {
-        setSessionId(data.data.id);
+        const data = await response.json();
+        if (data.success) {
+          setSessionId(data.data.id);
+        }
+      } catch (error) {
+        console.error('Failed to create session:', error);
       }
-    } catch (error) {
-      console.error('Failed to create session:', error);
     }
 
     const openingMessage: ConversationMessage = {
@@ -314,6 +324,7 @@ export default function PracticeSessionPage() {
   const startListening = useCallback(() => {
     if (recognitionRef.current && !isListeningRef.current) {
       setCurrentTranscript('');
+      currentTranscriptRef.current = '';
       isManuallyStoppingRef.current = false;
       try {
         recognitionRef.current.start();
@@ -326,49 +337,9 @@ export default function PracticeSessionPage() {
     }
   }, []);
 
-  // Stop listening and process the message
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current && isListeningRef.current) {
-      isManuallyStoppingRef.current = true;
-      isListeningRef.current = false;
-
-      // Save the transcript before aborting
-      const finalTranscript = currentTranscript.trim();
-
-      try {
-        // Use abort() instead of stop() to immediately terminate recognition
-        // abort() doesn't trigger onend or send final results
-        recognitionRef.current.abort();
-      } catch (error) {
-        console.error('Failed to abort recognition:', error);
-      }
-
-      setIsListening(false);
-      setCurrentTranscript('');
-
-      if (finalTranscript) {
-        handleVoiceMessage(finalTranscript);
-      }
-
-      // Reset the flag after a short delay
-      setTimeout(() => {
-        isManuallyStoppingRef.current = false;
-      }, 100);
-    }
-  }, [currentTranscript]);
-
-  // Toggle listening - uses ref to avoid stale closure issues
-  const toggleListening = useCallback(() => {
-    if (isListeningRef.current) {
-      stopListening();
-    } else {
-      startListening();
-    }
-  }, [startListening, stopListening]);
-
   // Handle voice message from trainee
-  const handleVoiceMessage = async (message: string) => {
-    if (!scenario || !sessionId) return;
+  const handleVoiceMessage = useCallback(async (message: string) => {
+    if (!scenario) return;
 
     const traineeMessage: ConversationMessage = {
       turn: turnCount + 1,
@@ -424,28 +395,74 @@ export default function PracticeSessionPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [scenario, turnCount, conversation, emotionContext]);
 
+  // Stop listening and process the message
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current && isListeningRef.current) {
+      isManuallyStoppingRef.current = true;
+      isListeningRef.current = false;
+
+      // Save the transcript before aborting - read from ref to avoid stale closure
+      const finalTranscript = currentTranscriptRef.current.trim();
+
+      try {
+        // Use abort() instead of stop() to immediately terminate recognition
+        // abort() doesn't trigger onend or send final results
+        recognitionRef.current.abort();
+      } catch (error) {
+        console.error('Failed to abort recognition:', error);
+      }
+
+      setIsListening(false);
+      setCurrentTranscript('');
+      currentTranscriptRef.current = '';
+
+      if (finalTranscript) {
+        handleVoiceMessage(finalTranscript);
+      }
+
+      // Reset the flag after a short delay
+      setTimeout(() => {
+        isManuallyStoppingRef.current = false;
+      }, 100);
+    }
+  }, [handleVoiceMessage]);
+
+  // Toggle listening - uses ref to avoid stale closure issues
+  const toggleListening = useCallback(() => {
+    if (isListeningRef.current) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  }, [startListening, stopListening]);
 
   const endSession = async () => {
-    if (!sessionId || !scenario) return;
+    if (!scenario) return;
+
+    // Set loading state immediately
+    setIsEndingSession(true);
 
     try {
-      await fetch(`/api/sessions/${sessionId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conversation_history: conversation,
-          turns_completed: turnCount,
-          status: 'completed',
-        }),
-      });
+      // Only update session in database if user is logged in
+      if (sessionId) {
+        await fetch(`/api/sessions/${sessionId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conversation_history: conversation,
+            turns_completed: turnCount,
+            status: 'completed',
+          }),
+        });
+      }
 
       const evaluationResponse = await fetch('/api/ai/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          session_id: sessionId,
+          session_id: sessionId || 'guest-session',
           scenario,
           transcript: conversation,
         }),
@@ -455,19 +472,25 @@ export default function PracticeSessionPage() {
 
       // Store evaluation results in localStorage for the results page
       if (evaluationData.success && typeof window !== 'undefined') {
+        const tempSessionId = sessionId || `guest-${Date.now()}`;
         const resultsData = {
           evaluation: evaluationData.data,
           transcript: conversation,
           turns_completed: turnCount,
-          sessionId: sessionId
+          sessionId: tempSessionId
         };
-        localStorage.setItem(`evaluation_${sessionId}`, JSON.stringify(resultsData));
-      }
+        localStorage.setItem(`evaluation_${tempSessionId}`, JSON.stringify(resultsData));
 
-      // Redirect to results page with sessionId
-      router.push(`/scenarios/${scenario.id}/results?sessionId=${sessionId}`);
+        // Redirect to results page
+        router.push(`/scenarios/${scenario.id}/results?sessionId=${tempSessionId}`);
+      } else {
+        // If evaluation failed, show error and reset loading state
+        console.error('Evaluation failed:', evaluationData.error);
+        setIsEndingSession(false);
+      }
     } catch (error) {
       console.error('Failed to end session:', error);
+      setIsEndingSession(false);
     }
   };
 
@@ -509,6 +532,81 @@ export default function PracticeSessionPage() {
     );
   }
 
+  // Show start session screen before session begins
+  if (!sessionStarted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl shadow-2xl">
+          <CardHeader className="space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <CardTitle className="text-3xl">{scenario.title}</CardTitle>
+                <CardDescription className="text-base">
+                  {scenario.description}
+                </CardDescription>
+              </div>
+              <Badge variant="secondary" className="text-sm">
+                {scenario.category}
+              </Badge>
+            </div>
+            <div className="flex gap-2">
+              <Badge variant="outline">
+                <Clock className="w-3 h-3 mr-1" />
+                ~10 turns
+              </Badge>
+              <Badge variant="outline" className={
+                scenario.difficulty === 'beginner' ? 'border-green-500 text-green-600' :
+                scenario.difficulty === 'intermediate' ? 'border-yellow-500 text-yellow-600' :
+                'border-red-500 text-red-600'
+              }>
+                {scenario.difficulty}
+              </Badge>
+            </div>
+          </CardHeader>
+          <Separator />
+          <CardContent className="pt-6 space-y-6">
+            <div className="bg-muted/50 rounded-lg p-4">
+              <h3 className="font-semibold mb-2 flex items-center gap-2">
+                <Info className="w-4 h-4 text-blue-600" />
+                Scenario Context
+              </h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {scenario.context_background}
+              </p>
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-4 border-2 border-blue-200 dark:border-blue-800">
+              <h3 className="font-semibold mb-2 flex items-center gap-2 text-blue-600">
+                <MessageCircle className="w-4 h-4" />
+                How It Works
+              </h3>
+              <ul className="text-sm space-y-1 text-blue-900 dark:text-blue-100">
+                <li>• The AI guest will start the conversation</li>
+                <li>• Click the microphone button to speak your response</li>
+                <li>• The AI will respond based on how you handle the situation</li>
+                <li>• Session ends after ~10 turns or when you click &quot;End Session&quot;</li>
+              </ul>
+            </div>
+
+            <div className="flex flex-col items-center gap-4 pt-4">
+              <Button
+                size="lg"
+                onClick={initializeSession}
+                className="w-full max-w-sm h-14 text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg"
+              >
+                <Mic className="w-6 h-6 mr-2" />
+                Start Session
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                Make sure your microphone is enabled and your volume is up
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex flex-col relative overflow-hidden">
       {/* Minimal Translucent Header */}
@@ -534,8 +632,9 @@ export default function PracticeSessionPage() {
               variant="destructive"
               size="sm"
               className="font-bold"
+              disabled={isEndingSession}
             >
-              End Session
+              {isEndingSession ? 'Ending...' : 'End Session'}
             </Button>
           </div>
         </div>
@@ -708,7 +807,7 @@ export default function PracticeSessionPage() {
 
               {/* Waveform Animation Ring */}
               {isListening && (
-                <div className="absolute inset-0 rounded-full border-4 border-red-400 animate-ping"></div>
+                <div className="absolute inset-0 rounded-full border-4 border-red-400 animate-ping pointer-events-none"></div>
               )}
             </div>
 
@@ -918,6 +1017,25 @@ export default function PracticeSessionPage() {
             )}
         </SheetContent>
       </Sheet>
+
+      {/* Loading Overlay for End Session */}
+      {isEndingSession && (
+        <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-lg flex items-center justify-center">
+          <Card className="w-full max-w-md mx-4">
+            <CardContent className="pt-6 pb-6 text-center space-y-4">
+              <div className="flex justify-center">
+                <div className="w-16 h-16 rounded-full border-4 border-blue-600/30 border-t-blue-600 animate-spin"></div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold">Ending Session</h3>
+                <p className="text-sm text-muted-foreground">
+                  Evaluating your performance and preparing results...
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
