@@ -4,6 +4,17 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthContext } from '@/lib/contexts/AuthContext';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { AlertCircle, ArrowLeft, Plus, X, Lock, Users, Globe } from 'lucide-react';
 
 export default function CreateScenarioPage() {
   const router = useRouter();
@@ -138,7 +149,21 @@ export default function CreateScenarioPage() {
   const prevStep = () => setStep(step - 1);
 
   if (isLoading) {
-    return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-100">Loading...</div>;
+    return (
+      <div className="min-h-screen bg-slate-950">
+        <header className="bg-slate-900 border-b border-slate-700 sticky top-0 z-40">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+            <Skeleton className="h-6 w-48" />
+          </div>
+        </header>
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+        </main>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -151,20 +176,19 @@ export default function CreateScenarioPage() {
       <header className="bg-slate-900 border-b border-slate-700 sticky top-0 z-40 shadow-sm backdrop-blur-md bg-slate-900/90">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex items-center justify-between">
-            <Link
-              href="/"
-              className="inline-flex items-center text-slate-400 hover:text-[#8B0000] transition-colors font-semibold group"
+            <Button
+              variant="ghost"
+              asChild
+              className="text-slate-400 hover:text-[#8B0000] transition-colors font-semibold"
             >
-              <svg className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to Dashboard
-            </Link>
+              <Link href="/" className="flex items-center">
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                Back to Dashboard
+              </Link>
+            </Button>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-[#8B0000] to-[#6B0000] rounded-xl shadow-lg shadow-[#8B0000]/20 flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
+                <Plus className="w-5 h-5 text-white" />
               </div>
               <span className="text-sm font-bold text-slate-100">Create Scenario</span>
             </div>
@@ -175,6 +199,7 @@ export default function CreateScenarioPage() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Progress Steps */}
         <div className="mb-10">
+          <Progress value={(step / 3) * 100} className="mb-6 h-2" />
           <div className="flex items-center justify-between mb-4">
             {[1, 2, 3].map((s) => (
               <div key={s} className="flex items-center flex-1">
@@ -201,169 +226,188 @@ export default function CreateScenarioPage() {
         </div>
 
         {/* Form Steps */}
-        <div className="bg-slate-800 rounded-3xl shadow-xl border border-slate-700 p-8">
-          {/* Step 1: Basic Details */}
-          {step === 1 && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-slate-100 mb-6">Scenario Basic Information</h2>
+        <Card className="bg-slate-800 border-slate-700">
+          <CardContent className="pt-8">
+            {/* Step 1: Basic Details */}
+            {step === 1 && (
+              <div className="space-y-6">
+                <CardHeader className="px-0 pt-0">
+                  <CardTitle className="text-2xl text-slate-100">Scenario Basic Information</CardTitle>
+                  <CardDescription className="text-slate-400">Set up the foundational details for your training scenario</CardDescription>
+                </CardHeader>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Scenario Title</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g., Handling a Billing Dispute"
-                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100 placeholder:text-slate-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Category</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100 placeholder:text-slate-500"
-                >
-                  <option value="">Select category</option>
-                  <option value="angry_guests">Angry Guests</option>
-                  <option value="language_barriers">Language Barriers</option>
-                  <option value="emergencies">Emergencies</option>
-                  <option value="special_requests">Special Requests</option>
-                  <option value="billing_disputes">Billing Disputes</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-3">Difficulty Level</label>
-                <div className="grid grid-cols-3 gap-4">
-                  {(['beginner', 'intermediate', 'advanced'] as const).map((level) => (
-                    <button
-                      key={level}
-                      type="button"
-                      onClick={() => setDifficulty(level)}
-                      className={`p-4 rounded-xl border-2 transition-all ${
-                        difficulty === level
-                          ? 'border-[#8B0000] bg-red-950/50'
-                          : 'border-slate-600 hover:border-slate-500'
-                      }`}
-                    >
-                      <span className="font-semibold capitalize">{level}</span>
-                    </button>
-                  ))}
+                <div className="space-y-2">
+                  <Label htmlFor="title" className="text-slate-300 font-semibold">Scenario Title</Label>
+                  <Input
+                    id="title"
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g., Handling a Billing Dispute"
+                    className="bg-slate-700 border-slate-600 text-slate-100 placeholder:text-slate-500 focus-visible:ring-[#8B0000]"
+                  />
                 </div>
-              </div>
 
-              <button
-                onClick={nextStep}
-                disabled={!title || !category}
-                className="w-full py-4 bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-              >
-                Continue
-              </button>
-            </div>
-          )}
+                <div className="space-y-2">
+                  <Label htmlFor="category" className="text-slate-300 font-semibold">Category</Label>
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger id="category" className="bg-slate-700 border-slate-600 text-slate-100 focus:ring-[#8B0000]">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-700 border-slate-600">
+                      <SelectItem value="angry_guests">Angry Guests</SelectItem>
+                      <SelectItem value="language_barriers">Language Barriers</SelectItem>
+                      <SelectItem value="emergencies">Emergencies</SelectItem>
+                      <SelectItem value="special_requests">Special Requests</SelectItem>
+                      <SelectItem value="billing_disputes">Billing Disputes</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-slate-300 font-semibold">Difficulty Level</Label>
+                  <RadioGroup value={difficulty} onValueChange={(value) => setDifficulty(value as 'beginner' | 'intermediate' | 'advanced')}>
+                    <div className="grid grid-cols-3 gap-4">
+                      {(['beginner', 'intermediate', 'advanced'] as const).map((level) => (
+                        <Label
+                          key={level}
+                          htmlFor={level}
+                          className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                            difficulty === level
+                              ? 'border-[#8B0000] bg-red-950/50 text-slate-100'
+                              : 'border-slate-600 hover:border-slate-500 text-slate-300'
+                          }`}
+                        >
+                          <RadioGroupItem value={level} id={level} className="sr-only" />
+                          <span className="font-semibold capitalize">{level}</span>
+                        </Label>
+                      ))}
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <Button
+                  onClick={nextStep}
+                  disabled={!title || !category}
+                  className="w-full bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white font-bold h-12"
+                >
+                  Continue
+                </Button>
+              </div>
+            )}
 
           {/* Step 2: Content */}
           {step === 2 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-slate-100 mb-6">Scenario Content</h2>
+              <CardHeader className="px-0 pt-0">
+                <CardTitle className="text-2xl text-slate-100">Scenario Content</CardTitle>
+                <CardDescription className="text-slate-400">Define the scenario details and AI guest behavior</CardDescription>
+              </CardHeader>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Context / Situation</label>
-                <textarea
+              <div className="space-y-2">
+                <Label htmlFor="context" className="text-slate-300 font-semibold">Context / Situation</Label>
+                <Textarea
+                  id="context"
                   value={context}
                   onChange={(e) => setContext(e.target.value)}
                   placeholder="Describe the situation the trainee will encounter..."
                   rows={4}
-                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100 placeholder:text-slate-500 resize-none"
+                  className="bg-slate-700 border-slate-600 text-slate-100 placeholder:text-slate-500 focus-visible:ring-[#8B0000] resize-none"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">AI Guest Opening Line</label>
-                <textarea
+              <div className="space-y-2">
+                <Label htmlFor="aiOpening" className="text-slate-300 font-semibold">AI Guest Opening Line</Label>
+                <Textarea
+                  id="aiOpening"
                   value={aiGuestOpening}
                   onChange={(e) => setAiGuestOpening(e.target.value)}
                   placeholder="What will the AI guest say to start the conversation?"
                   rows={3}
-                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100 placeholder:text-slate-500 resize-none"
+                  className="bg-slate-700 border-slate-600 text-slate-100 placeholder:text-slate-500 focus-visible:ring-[#8B0000] resize-none"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Learning Objectives</label>
+              <div className="space-y-2">
+                <Label className="text-slate-300 font-semibold">Learning Objectives</Label>
                 {learningObjectives.map((obj, index) => (
                   <div key={index} className="flex gap-2 mb-2">
-                    <input
+                    <Input
                       type="text"
                       value={obj}
                       onChange={(e) => updateLearningObjective(index, e.target.value)}
                       placeholder={`Learning objective ${index + 1}`}
-                      className="flex-1 px-4 py-3 bg-slate-700 border border-slate-600 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100 placeholder:text-slate-500"
+                      className="flex-1 bg-slate-700 border-slate-600 text-slate-100 placeholder:text-slate-500 focus-visible:ring-[#8B0000]"
                     />
                     {learningObjectives.length > 1 && (
-                      <button
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
                         onClick={() => removeLearningObjective(index)}
-                        className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl transition-all"
+                        className="shrink-0"
                       >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
+                        <X className="w-4 h-4" />
+                      </Button>
                     )}
                   </div>
                 ))}
-                <button
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={addLearningObjective}
-                  className="mt-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-sm font-semibold transition-all"
+                  className="mt-2 bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600 hover:text-slate-100"
                 >
-                  + Add Another Objective
-                </button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Another Objective
+                </Button>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Guest Personality Traits (comma-separated)</label>
-                <input
+              <div className="space-y-2">
+                <Label htmlFor="personality" className="text-slate-300 font-semibold">Guest Personality Traits (comma-separated)</Label>
+                <Input
+                  id="personality"
                   type="text"
                   value={guestPersonality}
                   onChange={(e) => setGuestPersonality(e.target.value)}
                   placeholder="e.g., frustrated, tired, professional"
-                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100 placeholder:text-slate-500"
+                  className="bg-slate-700 border-slate-600 text-slate-100 placeholder:text-slate-500 focus-visible:ring-[#8B0000]"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Guest Tone</label>
-                <select
-                  value={guestTone}
-                  onChange={(e) => setGuestTone(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100 placeholder:text-slate-500"
-                >
-                  <option value="">Select tone</option>
-                  <option value="angry">Angry</option>
-                  <option value="confused">Confused</option>
-                  <option value="polite">Polite</option>
-                  <option value="demanding">Demanding</option>
-                  <option value="anxious">Anxious</option>
-                </select>
+              <div className="space-y-2">
+                <Label htmlFor="tone" className="text-slate-300 font-semibold">Guest Tone</Label>
+                <Select value={guestTone} onValueChange={setGuestTone}>
+                  <SelectTrigger id="tone" className="bg-slate-700 border-slate-600 text-slate-100 focus:ring-[#8B0000]">
+                    <SelectValue placeholder="Select tone" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-700 border-slate-600">
+                    <SelectItem value="angry">Angry</SelectItem>
+                    <SelectItem value="confused">Confused</SelectItem>
+                    <SelectItem value="polite">Polite</SelectItem>
+                    <SelectItem value="demanding">Demanding</SelectItem>
+                    <SelectItem value="anxious">Anxious</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex gap-4">
-                <button
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={prevStep}
-                  className="flex-1 py-4 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl font-bold transition-all"
+                  className="flex-1 bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600 hover:text-slate-100 h-12"
                 >
                   Back
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={nextStep}
                   disabled={!context || !aiGuestOpening || learningObjectives.filter(o => o.trim()).length === 0}
-                  className="flex-1 py-4 bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                  className="flex-1 bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white font-bold h-12"
                 >
                   Continue
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -371,114 +415,106 @@ export default function CreateScenarioPage() {
           {/* Step 3: Settings & Privacy */}
           {step === 3 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-slate-100 mb-6">Final Settings & Privacy</h2>
+              <CardHeader className="px-0 pt-0">
+                <CardTitle className="text-2xl text-slate-100">Final Settings & Privacy</CardTitle>
+                <CardDescription className="text-slate-400">Choose who can access your scenario</CardDescription>
+              </CardHeader>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-3">Who can access this scenario?</label>
-                <div className="space-y-3">
-                  <button
-                    type="button"
-                    onClick={() => setVisibility('PRIVATE')}
-                    className={`w-full p-5 rounded-xl border-2 transition-all text-left ${
+              <div className="space-y-3">
+                <Label className="text-slate-300 font-semibold">Who can access this scenario?</Label>
+                <RadioGroup value={visibility} onValueChange={(value) => setVisibility(value as 'PRIVATE' | 'ORGANIZATION' | 'PUBLIC')}>
+                  <Label
+                    htmlFor="private"
+                    className={`flex items-start gap-4 p-5 rounded-xl border-2 transition-all cursor-pointer ${
                       visibility === 'PRIVATE'
                         ? 'border-[#8B0000] bg-red-950/50'
                         : 'border-slate-600 hover:border-slate-500'
                     }`}
                   >
-                    <div className="flex items-start gap-4">
-                      <svg className="w-6 h-6 text-slate-300 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
-                      <div>
-                        <div className="font-bold text-slate-100 mb-1">Private (Only Me)</div>
-                        <div className="text-sm text-slate-400">Only you can see and use this scenario</div>
-                      </div>
+                    <RadioGroupItem value="PRIVATE" id="private" className="mt-1" />
+                    <Lock className="w-6 h-6 text-slate-300 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="font-bold text-slate-100 mb-1">Private (Only Me)</div>
+                      <div className="text-sm text-slate-400">Only you can see and use this scenario</div>
                     </div>
-                  </button>
+                  </Label>
 
                   {user?.isOrgAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => setVisibility('ORGANIZATION')}
-                      className={`w-full p-5 rounded-xl border-2 transition-all text-left ${
+                    <Label
+                      htmlFor="organization"
+                      className={`flex items-start gap-4 p-5 rounded-xl border-2 transition-all cursor-pointer ${
                         visibility === 'ORGANIZATION'
                           ? 'border-[#8B0000] bg-red-950/50'
                           : 'border-slate-600 hover:border-slate-500'
                       }`}
                     >
-                      <div className="flex items-start gap-4">
-                        <svg className="w-6 h-6 text-slate-300 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        <div>
-                          <div className="font-bold text-slate-100 mb-1">Organization (Admin Only)</div>
-                          <div className="text-sm text-slate-400">All members of {user.organization?.name} can see and use this scenario</div>
-                        </div>
+                      <RadioGroupItem value="ORGANIZATION" id="organization" className="mt-1" />
+                      <Users className="w-6 h-6 text-slate-300 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <div className="font-bold text-slate-100 mb-1">Organization (Admin Only)</div>
+                        <div className="text-sm text-slate-400">All members of {user.organization?.name} can see and use this scenario</div>
                       </div>
-                    </button>
+                    </Label>
                   )}
 
-                  <button
-                    type="button"
-                    onClick={() => setVisibility('PUBLIC')}
-                    className={`w-full p-5 rounded-xl border-2 transition-all text-left ${
+                  <Label
+                    htmlFor="public"
+                    className={`flex items-start gap-4 p-5 rounded-xl border-2 transition-all cursor-pointer ${
                       visibility === 'PUBLIC'
                         ? 'border-[#8B0000] bg-red-950/50'
                         : 'border-slate-600 hover:border-slate-500'
                     }`}
                   >
-                    <div className="flex items-start gap-4">
-                      <svg className="w-6 h-6 text-slate-300 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <div>
-                        <div className="font-bold text-slate-100 mb-1">Public (Everyone)</div>
-                        <div className="text-sm text-slate-400">Anyone can see and use this scenario</div>
-                      </div>
+                    <RadioGroupItem value="PUBLIC" id="public" className="mt-1" />
+                    <Globe className="w-6 h-6 text-slate-300 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="font-bold text-slate-100 mb-1">Public (Everyone)</div>
+                      <div className="text-sm text-slate-400">Anyone can see and use this scenario</div>
                     </div>
-                  </button>
-                </div>
+                  </Label>
+                </RadioGroup>
               </div>
 
               {error && (
-                <div className="bg-red-950/50 border-l-4 border-red-500 p-4 rounded-lg">
-                  <div className="flex items-start">
-                    <svg className="w-5 h-5 text-red-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                    <p className="ml-3 text-sm text-red-300">{error}</p>
-                  </div>
-                </div>
+                <Alert variant="destructive" className="bg-red-950/50 border-red-500">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-red-300">
+                    {error}
+                  </AlertDescription>
+                </Alert>
               )}
 
               <div className="flex gap-4">
-                <button
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={prevStep}
-                  className="flex-1 py-4 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl font-bold transition-all"
+                  className="flex-1 bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600 hover:text-slate-100 h-12"
                 >
                   Back
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="flex-1 py-4 bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                  className="flex-1 bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white font-bold h-12"
                 >
                   {isSubmitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <>
+                      <svg className="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
                       Creating...
-                    </span>
+                    </>
                   ) : (
                     'Create Scenario'
                   )}
-                </button>
+                </Button>
               </div>
             </div>
           )}
-        </div>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
