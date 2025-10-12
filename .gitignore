@@ -47,3 +47,6 @@ prisma/*.db-journal
 # audit reports
 npm-audit-report.json
 nul
+
+# playwright test artifacts
+.playwright-mcp/
