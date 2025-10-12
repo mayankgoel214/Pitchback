@@ -16,14 +16,23 @@ export default function Home() {
   const [allScenarios, setAllScenarios] = useState<Scenario[]>([]);
   const [userSessions, setUserSessions] = useState<TrainingSession[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
-  const { employee, isAuthenticated, isLoading, logout } = useAuthContext();
+  const { user, isAuthenticated, isLoading, logout, token } = useAuthContext();
   const router = useRouter();
 
   // Fetch scenarios from database
   useEffect(() => {
     const fetchScenarios = async () => {
       try {
-        const response = await fetch('/api/scenarios');
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+
+        // Add auth token if available
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch('/api/scenarios', { headers });
         const data = await response.json();
 
         if (data.success) {
@@ -37,16 +46,24 @@ export default function Home() {
     };
 
     fetchScenarios();
-  }, []);
+  }, [token]);
 
   // Fetch user sessions
   useEffect(() => {
     const fetchSessions = async () => {
-      if (!employee?.id) return;
+      if (!user?.id) return;
 
       try {
         setSessionsLoading(true);
-        const response = await fetch(`/api/sessions?trainee_id=${employee.id}`);
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`/api/sessions?trainee_id=${user.id}`, { headers });
         const data = await response.json();
 
         if (data.success) {
@@ -62,7 +79,7 @@ export default function Home() {
     };
 
     fetchSessions();
-  }, [employee?.id]);
+  }, [user?.id, token]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -120,8 +137,8 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-4">
               <div className="hidden sm:block text-right px-4 py-2 bg-slate-800 rounded-xl border border-slate-700">
-                <p className="text-sm font-bold text-slate-100">{employee?.name}</p>
-                <p className="text-xs text-slate-400">{employee?.role} • {employee?.department}</p>
+                <p className="text-sm font-bold text-slate-100">{user?.name}</p>
+                <p className="text-xs text-slate-400">{user?.role}{user?.isOrgAdmin && ' • Org Admin'}</p>
               </div>
               <button
                 onClick={handleLogout}
@@ -139,7 +156,7 @@ export default function Home() {
         {/* Welcome Message */}
         <div className="mb-8">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
-            Welcome back, {employee?.name?.split(' ')[0]}!
+            Welcome back, {user?.name?.split(' ')[0]}!
           </h2>
           <p className="text-slate-400">Continue your training journey and improve your hospitality skills</p>
         </div>

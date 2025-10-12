@@ -1,17 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuthContext } from '@/lib/contexts/AuthContext';
 
 export default function CreateScenarioPage() {
   const router = useRouter();
+  const { user, isAuthenticated, isLoading, token } = useAuthContext();
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   // Form state
-  const [creatorRole, setCreatorRole] = useState<'manager' | 'admin' | ''>('');
-  const [creatorName, setCreatorName] = useState('');
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner');
   const [context, setContext] = useState('');
@@ -21,7 +24,14 @@ export default function CreateScenarioPage() {
   const [maxTurns, setMaxTurns] = useState(10);
   const [guestPersonality, setGuestPersonality] = useState('');
   const [guestTone, setGuestTone] = useState('');
-  const [saveOption, setSaveOption] = useState<'train' | 'save'>('save');
+  const [visibility, setVisibility] = useState<'PRIVATE' | 'ORGANIZATION' | 'PUBLIC'>('PRIVATE');
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   const addLearningObjective = () => {
     setLearningObjectives([...learningObjectives, '']);
@@ -38,77 +48,102 @@ export default function CreateScenarioPage() {
   };
 
   const handleSubmit = async () => {
-    // Create scenario object
-    const scenario = {
-      id: `custom-${Date.now()}`,
-      title,
-      category,
-      difficulty,
-      context,
-      ai_guest_opening: aiGuestOpening,
-      learning_objectives: learningObjectives.filter(obj => obj.trim() !== ''),
-      estimated_duration: estimatedDuration,
-      max_turns: maxTurns,
-      is_global: false,
-      is_custom: true,
-      created_by: creatorName,
-      creator_role: creatorRole,
-      guest_persona: {
-        personality_traits: guestPersonality.split(',').map(t => t.trim()),
-        tone: guestTone,
-        speaking_style: '',
-        emotion_progression: {
-          start: '',
-          good_response: '',
-          bad_response: '',
-          end_goal: ''
-        },
-        custom_instructions: ''
-      },
-      success_criteria: {
-        empathy: {
-          description: "Show understanding and empathy",
-          min_score: 70,
-          keywords: [],
-          examples: { good: [], bad: [] }
-        },
-        clarity: {
-          description: "Communicate clearly and effectively",
-          min_score: 70,
-          requirements: [],
-          examples: { good: [], bad: [] }
-        },
-        problem_solving: {
-          description: "Offer practical solutions",
-          min_score: 75,
-          required_solutions: 2,
-          examples: { good: [], bad: [] }
-        },
-        professionalism: {
-          description: "Maintain professional demeanor",
-          min_score: 80,
-          avoid_phrases: [],
-          required_behaviors: [],
-          examples: { good: [], bad: [] }
-        }
-      },
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      save_option: saveOption
-    };
+    if (!user || !token) {
+      setError('You must be logged in to create scenarios');
+      return;
+    }
 
-    // Save to localStorage
-    const existingScenarios = localStorage.getItem('customScenarios');
-    const scenarios = existingScenarios ? JSON.parse(existingScenarios) : [];
-    scenarios.push(scenario);
-    localStorage.setItem('customScenarios', JSON.stringify(scenarios));
+    setIsSubmitting(true);
+    setError('');
 
-    // Redirect to home
-    router.push('/');
+    try {
+      // Create scenario object
+      const scenarioData = {
+        title,
+        description: description || context,
+        category,
+        difficulty,
+        scenarioType: 'general',
+        contextBackground: context,
+        aiGuestOpening,
+        aiGuestPersona: JSON.stringify({
+          personality_traits: guestPersonality.split(',').map(t => t.trim()).filter(t => t),
+          tone: guestTone,
+          speaking_style: '',
+          emotion_progression: {
+            start: '',
+            good_response: '',
+            bad_response: '',
+            end_goal: ''
+          }
+        }),
+        successCriteria: {
+          empathy: {
+            description: "Show understanding and empathy",
+            min_score: 70,
+            keywords: [],
+            examples: { good: [], bad: [] }
+          },
+          clarity: {
+            description: "Communicate clearly and effectively",
+            min_score: 70,
+            requirements: [],
+            examples: { good: [], bad: [] }
+          },
+          problem_solving: {
+            description: "Offer practical solutions",
+            min_score: 75,
+            required_solutions: 2,
+            examples: { good: [], bad: [] }
+          },
+          professionalism: {
+            description: "Maintain professional demeanor",
+            min_score: 80,
+            avoid_phrases: [],
+            required_behaviors: [],
+            examples: { good: [], bad: [] }
+          }
+        },
+        evaluationRubric: {},
+        visibility,
+      };
+
+      // Save via API
+      const response = await fetch('/api/scenarios', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(scenarioData),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to create scenario');
+      }
+
+      // Redirect to home
+      router.push('/');
+    } catch (err: any) {
+      setError(err.message || 'Failed to create scenario');
+      console.error('Create scenario error:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const nextStep = () => setStep(step + 1);
   const prevStep = () => setStep(step - 1);
+
+  if (isLoading) {
+    return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-100">Loading...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -141,7 +176,7 @@ export default function CreateScenarioPage() {
         {/* Progress Steps */}
         <div className="mb-10">
           <div className="flex items-center justify-between mb-4">
-            {[1, 2, 3, 4].map((s) => (
+            {[1, 2, 3].map((s) => (
               <div key={s} className="flex items-center flex-1">
                 <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold transition-all ${
                   step >= s
@@ -150,7 +185,7 @@ export default function CreateScenarioPage() {
                 }`}>
                   {s}
                 </div>
-                {s < 4 && (
+                {s < 3 && (
                   <div className={`flex-1 h-1 mx-2 transition-all ${
                     step > s ? 'bg-[#8B0000]' : 'bg-slate-700'
                   }`} />
@@ -159,81 +194,16 @@ export default function CreateScenarioPage() {
             ))}
           </div>
           <div className="flex justify-between text-sm">
-            <span className={step >= 1 ? 'text-slate-100 font-semibold' : 'text-slate-500'}>Creator Info</span>
-            <span className={step >= 2 ? 'text-slate-100 font-semibold' : 'text-slate-500'}>Basic Details</span>
-            <span className={step >= 3 ? 'text-slate-100 font-semibold' : 'text-slate-500'}>Content</span>
-            <span className={step >= 4 ? 'text-slate-100 font-semibold' : 'text-slate-500'}>Settings</span>
+            <span className={step >= 1 ? 'text-slate-100 font-semibold' : 'text-slate-500'}>Basic Details</span>
+            <span className={step >= 2 ? 'text-slate-100 font-semibold' : 'text-slate-500'}>Content</span>
+            <span className={step >= 3 ? 'text-slate-100 font-semibold' : 'text-slate-500'}>Settings & Privacy</span>
           </div>
         </div>
 
         {/* Form Steps */}
         <div className="bg-slate-800 rounded-3xl shadow-xl border border-slate-700 p-8">
-          {/* Step 1: Creator Info */}
+          {/* Step 1: Basic Details */}
           {step === 1 && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-slate-100 mb-6">Who is creating this scenario?</h2>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Your Name</label>
-                <input
-                  type="text"
-                  value={creatorName}
-                  onChange={(e) => setCreatorName(e.target.value)}
-                  placeholder="John Doe"
-                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100 placeholder:text-slate-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-3">Your Role</label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setCreatorRole('manager')}
-                    className={`p-6 rounded-xl border-2 transition-all ${
-                      creatorRole === 'manager'
-                        ? 'border-[#8B0000] bg-red-950/50'
-                        : 'border-slate-600 hover:border-slate-500'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <svg className="w-8 h-8 mx-auto mb-2 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                      <span className="font-semibold text-slate-100">Manager</span>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCreatorRole('admin')}
-                    className={`p-6 rounded-xl border-2 transition-all ${
-                      creatorRole === 'admin'
-                        ? 'border-[#8B0000] bg-red-950/50'
-                        : 'border-slate-600 hover:border-slate-500'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <svg className="w-8 h-8 mx-auto mb-2 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                      </svg>
-                      <span className="font-semibold text-slate-100">Admin</span>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              <button
-                onClick={nextStep}
-                disabled={!creatorName || !creatorRole}
-                className="w-full py-4 bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-              >
-                Continue
-              </button>
-            </div>
-          )}
-
-          {/* Step 2: Basic Details */}
-          {step === 2 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-slate-100 mb-6">Scenario Basic Information</h2>
 
@@ -285,26 +255,18 @@ export default function CreateScenarioPage() {
                 </div>
               </div>
 
-              <div className="flex gap-4">
-                <button
-                  onClick={prevStep}
-                  className="flex-1 py-4 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl font-bold transition-all"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={nextStep}
-                  disabled={!title || !category}
-                  className="flex-1 py-4 bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-                >
-                  Continue
-                </button>
-              </div>
+              <button
+                onClick={nextStep}
+                disabled={!title || !category}
+                className="w-full py-4 bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+              >
+                Continue
+              </button>
             </div>
           )}
 
-          {/* Step 3: Content */}
-          {step === 3 && (
+          {/* Step 2: Content */}
+          {step === 2 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-slate-100 mb-6">Scenario Content</h2>
 
@@ -406,81 +368,88 @@ export default function CreateScenarioPage() {
             </div>
           )}
 
-          {/* Step 4: Settings */}
-          {step === 4 && (
+          {/* Step 3: Settings & Privacy */}
+          {step === 3 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-slate-100 mb-6">Final Settings</h2>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">Estimated Duration (minutes)</label>
-                  <input
-                    type="number"
-                    value={estimatedDuration}
-                    onChange={(e) => setEstimatedDuration(parseInt(e.target.value))}
-                    min="5"
-                    max="60"
-                    className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100 placeholder:text-slate-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">Maximum Conversation Turns</label>
-                  <input
-                    type="number"
-                    value={maxTurns}
-                    onChange={(e) => setMaxTurns(parseInt(e.target.value))}
-                    min="5"
-                    max="20"
-                    className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100 placeholder:text-slate-500"
-                  />
-                </div>
-              </div>
+              <h2 className="text-2xl font-bold text-slate-100 mb-6">Final Settings & Privacy</h2>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-3">What would you like to do with this scenario?</label>
-                <div className="space-y-4">
+                <label className="block text-sm font-semibold text-slate-300 mb-3">Who can access this scenario?</label>
+                <div className="space-y-3">
                   <button
                     type="button"
-                    onClick={() => setSaveOption('save')}
-                    className={`w-full p-6 rounded-xl border-2 transition-all text-left ${
-                      saveOption === 'save'
+                    onClick={() => setVisibility('PRIVATE')}
+                    className={`w-full p-5 rounded-xl border-2 transition-all text-left ${
+                      visibility === 'PRIVATE'
                         ? 'border-[#8B0000] bg-red-950/50'
                         : 'border-slate-600 hover:border-slate-500'
                     }`}
                   >
                     <div className="flex items-start gap-4">
                       <svg className="w-6 h-6 text-slate-300 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
                       <div>
-                        <div className="font-bold text-slate-100 mb-1">Save for Future Use</div>
-                        <div className="text-sm text-slate-400">Save this scenario to the library for employees to practice later</div>
+                        <div className="font-bold text-slate-100 mb-1">Private (Only Me)</div>
+                        <div className="text-sm text-slate-400">Only you can see and use this scenario</div>
                       </div>
                     </div>
                   </button>
 
+                  {user?.isOrgAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => setVisibility('ORGANIZATION')}
+                      className={`w-full p-5 rounded-xl border-2 transition-all text-left ${
+                        visibility === 'ORGANIZATION'
+                          ? 'border-[#8B0000] bg-red-950/50'
+                          : 'border-slate-600 hover:border-slate-500'
+                      }`}
+                    >
+                      <div className="flex items-start gap-4">
+                        <svg className="w-6 h-6 text-slate-300 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <div>
+                          <div className="font-bold text-slate-100 mb-1">Organization (Admin Only)</div>
+                          <div className="text-sm text-slate-400">All members of {user.organization?.name} can see and use this scenario</div>
+                        </div>
+                      </div>
+                    </button>
+                  )}
+
                   <button
                     type="button"
-                    onClick={() => setSaveOption('train')}
-                    className={`w-full p-6 rounded-xl border-2 transition-all text-left ${
-                      saveOption === 'train'
+                    onClick={() => setVisibility('PUBLIC')}
+                    className={`w-full p-5 rounded-xl border-2 transition-all text-left ${
+                      visibility === 'PUBLIC'
                         ? 'border-[#8B0000] bg-red-950/50'
                         : 'border-slate-600 hover:border-slate-500'
                     }`}
                   >
                     <div className="flex items-start gap-4">
                       <svg className="w-6 h-6 text-slate-300 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <div>
-                        <div className="font-bold text-slate-100 mb-1">Train AI & Save</div>
-                        <div className="text-sm text-slate-400">Train the AI with this scenario immediately and add it to the library</div>
+                        <div className="font-bold text-slate-100 mb-1">Public (Everyone)</div>
+                        <div className="text-sm text-slate-400">Anyone can see and use this scenario</div>
                       </div>
                     </div>
                   </button>
                 </div>
               </div>
+
+              {error && (
+                <div className="bg-red-950/50 border-l-4 border-red-500 p-4 rounded-lg">
+                  <div className="flex items-start">
+                    <svg className="w-5 h-5 text-red-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <p className="ml-3 text-sm text-red-300">{error}</p>
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-4">
                 <button
@@ -491,9 +460,20 @@ export default function CreateScenarioPage() {
                 </button>
                 <button
                   onClick={handleSubmit}
-                  className="flex-1 py-4 bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white rounded-xl font-bold transition-all shadow-lg"
+                  disabled={isSubmitting}
+                  className="flex-1 py-4 bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
                 >
-                  Create Scenario
+                  {isSubmitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Creating...
+                    </span>
+                  ) : (
+                    'Create Scenario'
+                  )}
                 </button>
               </div>
             </div>

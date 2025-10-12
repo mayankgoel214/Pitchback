@@ -2,15 +2,15 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthContext } from '@/lib/contexts/AuthContext';
+import { signInWithEmail } from '@/lib/firebase/auth';
+import Link from 'next/link';
 
 export default function LoginPage() {
-  const [name, setName] = useState('');
-  const [employeeId, setEmployeeId] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login } = useAuthContext();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,14 +19,13 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const success = login(name, employeeId);
-      if (success) {
-        router.push('/');
-      } else {
-        setError('Invalid name or employee ID. Please try again.');
-      }
-    } catch (err) {
-      setError('An error occurred. Please try again.');
+      // Sign in with Firebase
+      await signInWithEmail(email, password);
+
+      // Redirect to home page (AuthContext will handle the rest)
+      router.push('/');
+    } catch (err: any) {
+      setError(err.message || 'An error occurred. Please try again.');
       console.error('Login error:', err);
     } finally {
       setIsSubmitting(false);
@@ -125,53 +124,53 @@ export default function LoginPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Name Input */}
+              {/* Email Input */}
               <div>
                 <label
-                  htmlFor="name"
+                  htmlFor="email"
                   className="block text-sm font-semibold text-slate-300 mb-2"
                 >
-                  Full Name
+                  Email Address
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <svg className="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                     </svg>
                   </div>
                   <input
-                    id="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
-                    placeholder="Sarah Johnson"
+                    placeholder="you@hotel.com"
                     className="w-full pl-12 pr-4 py-3.5 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100 placeholder:text-slate-500"
                   />
                 </div>
               </div>
 
-              {/* Employee ID Input */}
+              {/* Password Input */}
               <div>
                 <label
-                  htmlFor="employeeId"
+                  htmlFor="password"
                   className="block text-sm font-semibold text-slate-300 mb-2"
                 >
-                  Employee ID
+                  Password
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <svg className="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                   </div>
                   <input
-                    id="employeeId"
-                    type="text"
-                    value={employeeId}
-                    onChange={(e) => setEmployeeId(e.target.value)}
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
-                    placeholder="EMP001"
+                    placeholder="Enter your password"
                     className="w-full pl-12 pr-4 py-3.5 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-[#8B0000] focus:border-[#8B0000] outline-none transition-all text-slate-100 placeholder:text-slate-500"
                   />
                 </div>
@@ -233,11 +232,11 @@ export default function LoginPage() {
 
             {/* Divider */}
             <div className="mt-8 pt-6 border-t border-slate-700">
-              <p className="text-xs text-center text-slate-400 mb-2 font-semibold">
-                Demo Credentials
-              </p>
-              <p className="text-xs text-center text-slate-400">
-                <span className="font-mono text-slate-300">Sarah Johnson</span> • <span className="font-mono text-slate-300">EMP001</span>
+              <p className="text-sm text-center text-slate-400">
+                Don't have an account?{' '}
+                <Link href="/signup" className="text-[#8B0000] hover:text-[#6B0000] font-semibold">
+                  Sign Up
+                </Link>
               </p>
             </div>
           </div>

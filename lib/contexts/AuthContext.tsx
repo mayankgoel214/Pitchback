@@ -1,66 +1,119 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Employee } from '@/lib/types/employee';
-import employeesData from '@/data/employees.json';
+import { User as FirebaseUser } from 'firebase/auth';
+import { onAuthStateChanged, signOut as firebaseSignOut, getCurrentUserToken } from '@/lib/firebase/auth';
+
+interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  isOrgAdmin: boolean;
+  organizationId: string;
+  organization?: {
+    id: string;
+    name: string;
+    type: string;
+  };
+}
 
 interface AuthContextType {
-  employee: Employee | null;
+  user: UserProfile | null;
+  firebaseUser: FirebaseUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (name: string, employeeId: string) => boolean;
-  logout: () => void;
+  token: string | null;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [employee, setEmployee] = useState<Employee | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Check if there's a logged-in employee in localStorage
-    const storedEmployee = localStorage.getItem('authenticatedEmployee');
-    if (storedEmployee) {
-      try {
-        setEmployee(JSON.parse(storedEmployee));
-      } catch (error) {
-        console.error('Error parsing stored employee:', error);
-        localStorage.removeItem('authenticatedEmployee');
+  // Fetch user profile from database
+  const fetchUserProfile = async (firebaseUid: string, userToken: string) => {
+    try {
+      const response = await fetch(`/api/users/${firebaseUid}`, {
+        headers: {
+          'Authorization': `Bearer ${userToken}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setUser(data.user);
+        }
+      } else {
+        console.error('Failed to fetch user profile');
+        setUser(null);
       }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      setUser(null);
     }
-    setIsLoading(false);
-  }, []);
-
-  const login = (name: string, employeeId: string): boolean => {
-    // Find employee matching both name and employee ID
-    const foundEmployee = (employeesData as Employee[]).find(
-      (emp) =>
-        emp.name.toLowerCase() === name.toLowerCase() &&
-        emp.id === employeeId
-    );
-
-    if (foundEmployee) {
-      setEmployee(foundEmployee);
-      localStorage.setItem('authenticatedEmployee', JSON.stringify(foundEmployee));
-      return true;
-    }
-    return false;
   };
 
-  const logout = () => {
-    setEmployee(null);
-    localStorage.removeItem('authenticatedEmployee');
+  // Listen to Firebase auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(async (firebaseUserData) => {
+      setFirebaseUser(firebaseUserData);
+
+      if (firebaseUserData) {
+        // User is signed in
+        const userToken = await getCurrentUserToken();
+        setToken(userToken);
+
+        if (userToken) {
+          await fetchUserProfile(firebaseUserData.uid, userToken);
+        }
+      } else {
+        // User is signed out
+        setUser(null);
+        setToken(null);
+      }
+
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const logout = async () => {
+    try {
+      await firebaseSignOut();
+      setUser(null);
+      setToken(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  const refreshUser = async () => {
+    if (firebaseUser) {
+      const userToken = await getCurrentUserToken();
+      if (userToken) {
+        await fetchUserProfile(firebaseUser.uid, userToken);
+      }
+    }
   };
 
   return (
     <AuthContext.Provider
       value={{
-        employee,
-        isAuthenticated: !!employee,
+        user,
+        firebaseUser,
+        isAuthenticated: !!user,
         isLoading,
-        login,
+        token,
         logout,
+        refreshUser,
       }}
     >
       {children}

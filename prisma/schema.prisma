@@ -11,6 +11,7 @@ model Organization {
   id              String           @id @default(cuid())
   name            String
   type            String           // hotel, restaurant, resort, etc.
+  inviteCode      String?          @unique // Optional invite code for joining
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   users           User[]
@@ -19,15 +20,17 @@ model Organization {
 }
 
 model User {
-  id              String           @id @default(cuid())
+  id              String           @id // Firebase UID
   email           String           @unique
   name            String
   role            String           // trainee, trainer, admin
+  isOrgAdmin      Boolean          @default(false) // Can manage org and create org-wide scenarios
   organizationId  String
   organization    Organization     @relation(fields: [organizationId], references: [id])
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   trainingSessions TrainingSession[]
+  createdScenarios Scenario[]      @relation("ScenarioCreator")
 }
 
 model Scenario {
@@ -44,10 +47,16 @@ model Scenario {
   evaluationRubric      Json             @map("evaluation_rubric")
   organizationId        String?
   organization          Organization?    @relation(fields: [organizationId], references: [id])
-  isPublic              Boolean          @default(true)
+  visibility            String           @default("PRIVATE") // PUBLIC, ORGANIZATION, PRIVATE
+  createdById           String?          @map("created_by_id") // Firebase UID of creator
+  createdBy             User?            @relation("ScenarioCreator", fields: [createdById], references: [id])
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
   trainingSessions      TrainingSession[]
+
+  @@index([visibility])
+  @@index([organizationId])
+  @@index([createdById])
 }
 
 model TrainingSession {
