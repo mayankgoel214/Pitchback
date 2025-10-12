@@ -8,7 +8,7 @@ import { prisma } from '@/lib/db/prisma';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { firebaseUid, email, name, organizationName, organizationType, isNewOrg } = body;
+    const { firebaseUid, email, name, organizationName, organizationType, isNewOrg, inviteCode } = body;
 
     // Validate required fields
     if (!firebaseUid || !email || !name) {
@@ -52,13 +52,26 @@ export async function POST(request: NextRequest) {
 
       organizationId = organization.id;
     } else {
-      // Join existing organization
-      // For now, we'll create a default organization if none specified
-      // In production, you'd handle invite codes here
-      return NextResponse.json(
-        { success: false, error: 'Joining existing organizations not yet implemented' },
-        { status: 400 }
-      );
+      // Join existing organization with invite code
+      if (!inviteCode) {
+        return NextResponse.json(
+          { success: false, error: 'Invite code required to join an organization' },
+          { status: 400 }
+        );
+      }
+
+      const organization = await prisma.organization.findUnique({
+        where: { inviteCode: inviteCode.toUpperCase() },
+      });
+
+      if (!organization) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid invite code. Please check and try again.' },
+          { status: 404 }
+        );
+      }
+
+      organizationId = organization.id;
     }
 
     // Create user

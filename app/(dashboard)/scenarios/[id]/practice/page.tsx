@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Scenario } from '@/lib/types/scenario';
 import { ConversationMessage } from '@/lib/types/session';
 import { useAuthContext } from '@/lib/contexts/AuthContext';
@@ -36,14 +37,15 @@ import {
   AlertCircle,
   CheckCircle2,
   Menu,
-  X
+  X,
+  ArrowLeft
 } from 'lucide-react';
 
 export default function PracticeSessionPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const { user: employee } = useAuthContext();
+  const { user: employee, token } = useAuthContext();
 
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [scenarioLoading, setScenarioLoading] = useState(true);
@@ -92,7 +94,14 @@ export default function PracticeSessionPage() {
     const fetchScenario = async () => {
       try {
         setScenarioLoading(true);
-        const response = await fetch(`/api/scenarios/${id}`);
+        const headers: HeadersInit = {};
+
+        // Add Authorization header if user is authenticated
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`/api/scenarios/${id}`, { headers });
         const data = await response.json();
 
         if (data.success) {
@@ -108,7 +117,7 @@ export default function PracticeSessionPage() {
     };
 
     fetchScenario();
-  }, [id]);
+  }, [id, token]);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -613,6 +622,17 @@ export default function PracticeSessionPage() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/60 backdrop-blur-xl border-b border-border/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="gap-2"
+            >
+              <Link href="/dashboard">
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Back to Dashboard</span>
+              </Link>
+            </Button>
             <Badge variant="outline" className="bg-background/50 backdrop-blur-sm">
               {scenario.title}
             </Badge>

@@ -59,7 +59,7 @@ export async function generateAIGuestResponse(
     // Initialize or use provided emotion context
     let currentEmotionContext = emotionContext || initializeEmotionContext(scenario);
 
-    // Analyze trainee's message sentiment
+    // Analyze trainee's message sentiment (keep for emotion state transitions)
     const sentiment = analyzeSentiment(traineeMessage);
 
     // Update emotion state based on trainee's performance
@@ -70,6 +70,17 @@ export async function generateAIGuestResponse(
       turnNumber,
       scenario
     );
+
+    // Use GPT to evaluate live performance (similar to final evaluation)
+    const gptPerformanceScore = await evaluateLivePerformance(
+      scenario,
+      conversationHistory,
+      traineeMessage,
+      currentEmotionContext.escalation_level
+    );
+
+    // Override the keyword-based performance score with GPT evaluation
+    currentEmotionContext.trainee_performance_score = gptPerformanceScore;
 
     // Build enhanced system prompt with emotion awareness
     const systemPrompt = buildEnhancedAIGuestSystemPrompt(
@@ -370,6 +381,73 @@ Provide your evaluation as a JSON object with this EXACT structure:
 }
 
 Be specific and constructive. Quote actual phrases from the conversation in specific_examples.`;
+}
+
+/**
+ * Evaluate trainee's current response in real-time for live feedback
+ * Uses similar criteria as final evaluation but lighter weight
+ */
+export async function evaluateLivePerformance(
+  scenario: Scenario,
+  conversationHistory: ConversationMessage[],
+  traineeMessage: string,
+  currentEscalationLevel: number
+): Promise<number> {
+  try {
+    const conversationSoFar = conversationHistory
+      .map((msg) => `${msg.speaker === 'trainee' ? 'TRAINEE' : 'GUEST'}: ${msg.text}`)
+      .join('\n');
+
+    const systemPrompt = `You are evaluating a trainee's response in a live hospitality training session.
+
+SCENARIO: ${scenario.title}
+CONTEXT: ${scenario.context_background}
+CURRENT ESCALATION LEVEL: ${currentEscalationLevel}/100
+
+CONVERSATION SO FAR:
+${conversationSoFar}
+
+TRAINEE'S LATEST MESSAGE:
+${traineeMessage}
+
+CRITICAL EVALUATION RULES:
+1. Has the trainee shown EMPATHY? (understanding, apology, acknowledgment)
+2. Is the trainee being CLEAR and professional in communication?
+3. Is the trainee actively working toward PROBLEM-SOLVING? (offering solutions, taking action)
+4. Is the trainee maintaining PROFESSIONALISM? (no defensive language, staying calm)
+
+PROBLEM RESOLUTION CHECK:
+- If the guest's core problem is NOT YET ADDRESSED or NO SOLUTION offered: score MUST be 0-40
+- If trainee is making progress toward resolution: score can be 40-70
+- If trainee has offered concrete solutions and guest is responding positively: score can be 70-95
+
+Respond with a JSON object:
+{
+  "performance_score": number (0-100, based on above rules),
+  "problem_being_addressed": boolean,
+  "brief_reasoning": "One sentence explaining the score"
+}
+
+Be strict - keyword phrases alone without actual problem-solving should score low.`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini', // Use mini for faster, cheaper live evaluation
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: 'Evaluate this trainee response.' },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.3,
+      max_tokens: 150,
+    });
+
+    const result = JSON.parse(completion.choices[0].message.content || '{"performance_score": 50}');
+    return result.performance_score || 50;
+  } catch (error) {
+    console.error('Error evaluating live performance:', error);
+    // Fallback to keyword-based if GPT fails
+    return 50;
+  }
 }
 
 /**

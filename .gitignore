@@ -50,3 +50,5 @@ nul
 
 # playwright test artifacts
 .playwright-mcp/
+
+certificates

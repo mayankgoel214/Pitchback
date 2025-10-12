@@ -37,73 +37,122 @@ export default function ResultsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!sessionId) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // Fetch evaluation results from localStorage
-      const storedData = localStorage.getItem(`evaluation_${sessionId}`);
-
-      if (!storedData) {
-        console.error('No evaluation data found for session:', sessionId);
+    const fetchResults = async () => {
+      if (!sessionId) {
         setLoading(false);
         return;
       }
 
-      const { evaluation, transcript, turns_completed } = JSON.parse(storedData);
+      try {
+        // First, try to fetch from database API
+        const response = await fetch(`/api/sessions/${sessionId}`);
+        const data = await response.json();
 
-      // Transform the evaluation data to match the UI structure
-      const transformedResults: EvaluationResult = {
-        problem_resolved: evaluation.problem_resolved ?? true, // default to true for old evaluations
-        resolution_summary: evaluation.resolution_summary ?? 'Resolution status not available',
-        overall_score: Math.round(evaluation.scores.overall),
-        competencies: {
-          empathy: {
-            score: Math.round(evaluation.scores.empathy),
-            feedback: [
-              ...evaluation.detailed_feedback.empathy.what_went_well.map((item: string) => `✓ ${item}`),
-              ...evaluation.detailed_feedback.empathy.areas_for_improvement.map((item: string) => `→ ${item}`)
-            ].join(' ')
-          },
-          clarity: {
-            score: Math.round(evaluation.scores.clarity),
-            feedback: [
-              ...evaluation.detailed_feedback.clarity.what_went_well.map((item: string) => `✓ ${item}`),
-              ...evaluation.detailed_feedback.clarity.areas_for_improvement.map((item: string) => `→ ${item}`)
-            ].join(' ')
-          },
-          problem_solving: {
-            score: Math.round(evaluation.scores.problem_solving),
-            feedback: [
-              ...evaluation.detailed_feedback.problem_solving.what_went_well.map((item: string) => `✓ ${item}`),
-              ...evaluation.detailed_feedback.problem_solving.areas_for_improvement.map((item: string) => `→ ${item}`)
-            ].join(' ')
-          },
-          professionalism: {
-            score: Math.round(evaluation.scores.professionalism),
-            feedback: [
-              ...evaluation.detailed_feedback.professionalism.what_went_well.map((item: string) => `✓ ${item}`),
-              ...evaluation.detailed_feedback.professionalism.areas_for_improvement.map((item: string) => `→ ${item}`)
-            ].join(' ')
+        if (data.success && data.data.evaluation) {
+          // Successfully fetched from database
+          const session = data.data;
+          const evaluation = session.evaluation;
+
+          // Transform database evaluation to match UI structure
+          // Note: Database doesn't store per-competency detailed feedback
+          const transformedResults: EvaluationResult = {
+            problem_resolved: evaluation.problem_resolved ?? true,
+            resolution_summary: evaluation.resolution_summary ?? evaluation.overall_summary ?? 'Session completed successfully',
+            overall_score: Math.round(evaluation.scores.overall),
+            competencies: {
+              empathy: {
+                score: Math.round(evaluation.scores.empathy),
+                feedback: evaluation.overall_summary || 'See overall feedback below for detailed insights.'
+              },
+              clarity: {
+                score: Math.round(evaluation.scores.clarity),
+                feedback: evaluation.overall_summary || 'See overall feedback below for detailed insights.'
+              },
+              problem_solving: {
+                score: Math.round(evaluation.scores.problem_solving),
+                feedback: evaluation.overall_summary || 'See overall feedback below for detailed insights.'
+              },
+              professionalism: {
+                score: Math.round(evaluation.scores.professionalism),
+                feedback: evaluation.overall_summary || 'See overall feedback below for detailed insights.'
+              }
+            },
+            strengths: evaluation.best_practices || [],
+            areas_for_improvement: evaluation.improvement_recommendations || [],
+            transcript: session.transcript?.exchanges || [],
+            turns_completed: session.turns_completed || 0
+          };
+
+          setTimeout(() => {
+            setResults(transformedResults);
+            setLoading(false);
+          }, 1500);
+        } else {
+          // Fallback to localStorage for guest sessions
+          console.log('No evaluation in database, checking localStorage...');
+          const storedData = localStorage.getItem(`evaluation_${sessionId}`);
+
+          if (!storedData) {
+            console.error('No evaluation data found for session:', sessionId);
+            setLoading(false);
+            return;
           }
-        },
-        strengths: evaluation.best_practices || [],
-        areas_for_improvement: evaluation.improvement_recommendations || [],
-        transcript: transcript || [],
-        turns_completed: turns_completed || 0
-      };
 
-      // Simulate a brief delay for loading animation
-      setTimeout(() => {
-        setResults(transformedResults);
+          const { evaluation, transcript, turns_completed } = JSON.parse(storedData);
+
+          // Transform the evaluation data to match the UI structure
+          const transformedResults: EvaluationResult = {
+            problem_resolved: evaluation.problem_resolved ?? true,
+            resolution_summary: evaluation.resolution_summary ?? 'Resolution status not available',
+            overall_score: Math.round(evaluation.scores.overall),
+            competencies: {
+              empathy: {
+                score: Math.round(evaluation.scores.empathy),
+                feedback: [
+                  ...evaluation.detailed_feedback.empathy.what_went_well.map((item: string) => `✓ ${item}`),
+                  ...evaluation.detailed_feedback.empathy.areas_for_improvement.map((item: string) => `→ ${item}`)
+                ].join(' ')
+              },
+              clarity: {
+                score: Math.round(evaluation.scores.clarity),
+                feedback: [
+                  ...evaluation.detailed_feedback.clarity.what_went_well.map((item: string) => `✓ ${item}`),
+                  ...evaluation.detailed_feedback.clarity.areas_for_improvement.map((item: string) => `→ ${item}`)
+                ].join(' ')
+              },
+              problem_solving: {
+                score: Math.round(evaluation.scores.problem_solving),
+                feedback: [
+                  ...evaluation.detailed_feedback.problem_solving.what_went_well.map((item: string) => `✓ ${item}`),
+                  ...evaluation.detailed_feedback.problem_solving.areas_for_improvement.map((item: string) => `→ ${item}`)
+                ].join(' ')
+              },
+              professionalism: {
+                score: Math.round(evaluation.scores.professionalism),
+                feedback: [
+                  ...evaluation.detailed_feedback.professionalism.what_went_well.map((item: string) => `✓ ${item}`),
+                  ...evaluation.detailed_feedback.professionalism.areas_for_improvement.map((item: string) => `→ ${item}`)
+                ].join(' ')
+              }
+            },
+            strengths: evaluation.best_practices || [],
+            areas_for_improvement: evaluation.improvement_recommendations || [],
+            transcript: transcript || [],
+            turns_completed: turns_completed || 0
+          };
+
+          setTimeout(() => {
+            setResults(transformedResults);
+            setLoading(false);
+          }, 1500);
+        }
+      } catch (error) {
+        console.error('Error loading evaluation results:', error);
         setLoading(false);
-      }, 1500);
-    } catch (error) {
-      console.error('Error loading evaluation results:', error);
-      setLoading(false);
-    }
+      }
+    };
+
+    fetchResults();
   }, [sessionId]);
 
   if (loading) {
