@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id              String           @id @default(cuid())
+  name            String
+  type            String           // hotel, restaurant, resort, etc.
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  users           User[]
+  scenarios       Scenario[]
+  trainingSessions TrainingSession[]
+}
+
+model User {
+  id              String           @id @default(cuid())
+  email           String           @unique
+  name            String
+  role            String           // trainee, trainer, admin
+  organizationId  String
+  organization    Organization     @relation(fields: [organizationId], references: [id])
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  trainingSessions TrainingSession[]
+}
+
+model Scenario {
+  id                    String           @id @default(cuid())
+  title                 String
+  description           String
+  difficulty            String           // beginner, intermediate, advanced
+  category              String           // check-in, complaint, concierge, room-service
+  scenarioType          String           // front-desk, restaurant, etc.
+  aiGuestPersona        String           @map("ai_guest_persona")
+  aiGuestOpening        String           @map("ai_guest_opening")
+  contextBackground     String           @map("context_background")
+  successCriteria       Json             @map("success_criteria")
+  evaluationRubric      Json             @map("evaluation_rubric")
+  organizationId        String?
+  organization          Organization?    @relation(fields: [organizationId], references: [id])
+  isPublic              Boolean          @default(true)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  trainingSessions      TrainingSession[]
+}
+
+model TrainingSession {
+  id                    String                @id @default(cuid())
+  traineeId             String                @map("trainee_id")
+  trainee               User                  @relation(fields: [traineeId], references: [id])
+  scenarioId            String                @map("scenario_id")
+  scenario              Scenario              @relation(fields: [scenarioId], references: [id])
+  organizationId        String                @map("organization_id")
+  organization          Organization          @relation(fields: [organizationId], references: [id])
+  status                String                @default("in_progress") // in_progress, completed, abandoned
+  startedAt             DateTime              @default(now()) @map("started_at")
+  completedAt           DateTime?             @map("completed_at")
+  durationMs            Int?                  @map("duration_ms")
+  conversationMessages  ConversationMessage[]
+  evaluation            Evaluation?
+  emotionHistory        Json?                 @map("emotion_history")
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+}
+
+model ConversationMessage {
+  id                String          @id @default(cuid())
+  sessionId         String          @map("session_id")
+  session           TrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  turn              Int
+  speaker           String          // trainee, ai_guest
+  text              String
+  audioUrl          String?         @map("audio_url")
+  durationMs        Int?            @map("duration_ms")
+  timestamp         DateTime        @default(now())
+  emotionState      String?         @map("emotion_state")
+
+  @@index([sessionId])
+}
+
+model Evaluation {
+  id                String          @id @default(cuid())
+  sessionId         String          @unique @map("session_id")
+  session           TrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  overallScore      Float           @map("overall_score")
+  competencyScores  Json            @map("competency_scores")
+  strengths         Json
+  areasForImprovement Json          @map("areas_for_improvement")
+  detailedFeedback  String          @map("detailed_feedback")
+  passed            Boolean
+  createdAt         DateTime        @default(now())
+}

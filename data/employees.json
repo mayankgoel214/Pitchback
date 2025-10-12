@@ -1,0 +1,82 @@
+[
+  {
+    "id": "EMP001",
+    "name": "Sarah Johnson",
+    "email": "sarah.johnson@hotel.com",
+    "password": "password123",
+    "department": "Front Desk",
+    "role": "Receptionist"
+  },
+  {
+    "id": "EMP002",
+    "name": "Michael Chen",
+    "email": "michael.chen@hotel.com",
+    "password": "password123",
+    "department": "Front Desk",
+    "role": "Senior Receptionist"
+  },
+  {
+    "id": "EMP003",
+    "name": "Emily Rodriguez",
+    "email": "emily.rodriguez@hotel.com",
+    "password": "password123",
+    "department": "Concierge",
+    "role": "Concierge"
+  },
+  {
+    "id": "EMP004",
+    "name": "James Wilson",
+    "email": "james.wilson@hotel.com",
+    "password": "password123",
+    "department": "Guest Services",
+    "role": "Guest Service Manager"
+  },
+  {
+    "id": "EMP005",
+    "name": "Aisha Patel",
+    "email": "aisha.patel@hotel.com",
+    "password": "password123",
+    "department": "Front Desk",
+    "role": "Night Auditor"
+  },
+  {
+    "id": "EMP006",
+    "name": "David Martinez",
+    "email": "david.martinez@hotel.com",
+    "password": "password123",
+    "department": "Guest Services",
+    "role": "Guest Relations"
+  },
+  {
+    "id": "EMP007",
+    "name": "Jessica Lee",
+    "email": "jessica.lee@hotel.com",
+    "password": "password123",
+    "department": "Concierge",
+    "role": "Head Concierge"
+  },
+  {
+    "id": "EMP008",
+    "name": "Robert Thompson",
+    "email": "robert.thompson@hotel.com",
+    "password": "password123",
+    "department": "Front Desk",
+    "role": "Front Office Manager"
+  },
+  {
+    "id": "EMP009",
+    "name": "Maria Garcia",
+    "email": "maria.garcia@hotel.com",
+    "password": "password123",
+    "department": "Guest Services",
+    "role": "Guest Service Agent"
+  },
+  {
+    "id": "EMP010",
+    "name": "Kevin Nguyen",
+    "email": "kevin.nguyen@hotel.com",
+    "password": "password123",
+    "department": "Front Desk",
+    "role": "Receptionist"
+  }
+]
