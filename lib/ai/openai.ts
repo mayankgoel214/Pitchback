@@ -284,6 +284,17 @@ function buildEvaluationSystemPrompt(scenario: Scenario): string {
 SCENARIO: ${scenario.title}
 CONTEXT: ${scenario.context_background}
 
+CRITICAL: PROBLEM RESOLUTION REQUIREMENT
+Before scoring, you MUST verify:
+1. What was the guest's core problem/need in this scenario?
+2. Did the trainee actually address and resolve this problem?
+3. Was a concrete solution offered AND accepted/acknowledged by the guest?
+
+If the conversation ended WITHOUT resolving the guest's problem:
+- Problem-solving score MUST be 0-30 (severe penalty)
+- Overall score CANNOT exceed 50
+- Mark clearly in improvement recommendations: "Failed to resolve guest's core issue"
+
 EVALUATION CRITERIA:
 
 1. EMPATHY (0-100):
@@ -317,12 +328,14 @@ Bad examples: ${criteria.professionalism.examples.bad.join(' | ')}
 
 Provide your evaluation as a JSON object with this EXACT structure:
 {
+  "problem_resolved": boolean (true ONLY if guest's core issue was actually addressed and resolved),
+  "resolution_summary": "Brief explanation: what was the problem and was it solved?",
   "scores": {
     "empathy": number (0-100),
     "clarity": number (0-100),
-    "problem_solving": number (0-100),
+    "problem_solving": number (0-100 - MUST be 0-30 if problem_resolved is false),
     "professionalism": number (0-100),
-    "overall": number (average of the four scores)
+    "overall": number (average of the four scores, MAX 50 if problem_resolved is false)
   },
   "detailed_feedback": {
     "empathy": {

@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { Scenario } from '@/lib/types/scenario';
+import { TrainingSession } from '@/lib/types/session';
 
 interface ScenarioCardProps {
   scenario: Scenario;
+  previousSessions?: TrainingSession[];
 }
 
 const difficultyColors = {
@@ -53,7 +55,23 @@ const categoryIcons: Record<string, React.ReactNode> = {
   ),
 };
 
-export default function ScenarioCard({ scenario }: ScenarioCardProps) {
+export default function ScenarioCard({ scenario, previousSessions = [] }: ScenarioCardProps) {
+  // Find sessions for this scenario
+  const scenarioSessions = previousSessions.filter(s => s.scenario_id === scenario.id);
+  const completedSessions = scenarioSessions.filter(s => s.status === 'completed');
+  const hasCompleted = completedSessions.length > 0;
+
+  // Get best score
+  const bestScore = hasCompleted
+    ? Math.max(...completedSessions.map(s => s.overall_score || 0))
+    : null;
+
+  const getScoreBadge = (score: number) => {
+    if (score >= 80) return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+    if (score >= 60) return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+    return 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+  };
+
   return (
     <Link href={`/scenarios/${scenario.id}`} className="group">
       <div className="bg-slate-800 rounded-3xl border-2 border-slate-700 hover:border-[#8B0000] hover:shadow-2xl hover:shadow-[#8B0000]/20 transition-all duration-300 p-7 cursor-pointer relative overflow-hidden transform hover:-translate-y-1">
@@ -62,6 +80,18 @@ export default function ScenarioCard({ scenario }: ScenarioCardProps) {
 
         {/* Decorative Corner Badge */}
         <div className="absolute -top-12 -right-12 w-32 h-32 bg-gradient-to-br from-[#8B0000]/10 to-transparent rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+        {/* Completion Badge */}
+        {hasCompleted && bestScore !== null && (
+          <div className="absolute top-4 right-4">
+            <div className={`px-3 py-1.5 rounded-lg border-2 ${getScoreBadge(bestScore)} backdrop-blur-sm flex items-center gap-2`}>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm font-bold">Best: {bestScore.toFixed(0)}</span>
+            </div>
+          </div>
+        )}
 
         {/* Content */}
         <div className="relative z-10">
@@ -129,11 +159,11 @@ export default function ScenarioCard({ scenario }: ScenarioCardProps) {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
-                Up to 10 turns
+                {hasCompleted ? `${completedSessions.length} attempt${completedSessions.length > 1 ? 's' : ''}` : 'Up to 10 turns'}
               </span>
             </div>
             <div className="flex items-center gap-2 text-[#8B0000] group-hover:text-[#6B0000] font-bold text-sm transition-colors">
-              <span>Begin Training</span>
+              <span>{hasCompleted ? 'Practice Again' : 'Begin Training'}</span>
               <svg className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>

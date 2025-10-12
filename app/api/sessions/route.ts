@@ -52,12 +52,25 @@ export async function GET(request: NextRequest) {
             problem_solving: 0,
             professionalism: 0,
           },
+      overall_score: session.evaluation?.overallScore || undefined,
+      duration_seconds: session.durationMs ? Math.round(session.durationMs / 1000) : undefined,
       turns_completed: session.conversationMessages.length,
       hints_used: 0,
       status: session.status,
       started_at: session.startedAt.toISOString(),
       completed_at: session.completedAt?.toISOString(),
       created_at: session.createdAt.toISOString(),
+      evaluation: session.evaluation ? {
+        scores: {
+          ...(session.evaluation.competencyScores as Record<string, number>),
+          overall: session.evaluation.overallScore
+        },
+        detailed_feedback: {},
+        overall_summary: session.evaluation.detailedFeedback || '',
+        best_practices: session.evaluation.strengths as string[],
+        key_mistakes: [],
+        improvement_recommendations: session.evaluation.areasForImprovement as string[],
+      } : undefined,
     }));
 
     return NextResponse.json({

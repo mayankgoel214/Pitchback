@@ -5,6 +5,8 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 interface EvaluationResult {
+  problem_resolved: boolean;
+  resolution_summary: string;
   overall_score: number;
   competencies: {
     empathy: { score: number; feedback: string; };
@@ -48,6 +50,8 @@ export default function ResultsPage() {
 
       // Transform the evaluation data to match the UI structure
       const transformedResults: EvaluationResult = {
+        problem_resolved: evaluation.problem_resolved ?? true, // default to true for old evaluations
+        resolution_summary: evaluation.resolution_summary ?? 'Resolution status not available',
         overall_score: Math.round(evaluation.scores.overall),
         competencies: {
           empathy: {
@@ -211,6 +215,41 @@ export default function ResultsPage() {
                 <span className="text-cyan-100">You completed </span>
                 <span className="font-bold">{results.turns_completed} conversation turns</span>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Problem Resolution Status */}
+        <div className={`rounded-3xl shadow-xl border p-8 mb-8 ${
+          results.problem_resolved
+            ? 'bg-gradient-to-r from-emerald-900/30 to-emerald-800/30 border-emerald-600'
+            : 'bg-gradient-to-r from-red-900/30 to-red-800/30 border-red-600'
+        }`}>
+          <div className="flex items-start gap-4">
+            <div className={`p-4 rounded-2xl ${
+              results.problem_resolved
+                ? 'bg-emerald-500/20 border-2 border-emerald-500'
+                : 'bg-red-500/20 border-2 border-red-500'
+            }`}>
+              {results.problem_resolved ? (
+                <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : (
+                <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+            </div>
+            <div className="flex-1">
+              <h2 className={`text-2xl font-bold mb-2 ${
+                results.problem_resolved ? 'text-emerald-300' : 'text-red-300'
+              }`}>
+                {results.problem_resolved ? 'Problem Resolved ✓' : 'Problem Not Resolved'}
+              </h2>
+              <p className="text-slate-300 leading-relaxed">
+                {results.resolution_summary}
+              </p>
             </div>
           </div>
         </div>

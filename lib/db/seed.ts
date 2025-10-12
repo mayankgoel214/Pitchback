@@ -34,6 +34,25 @@ export async function seedDatabase() {
 
     console.log('Created user:', user.name);
 
+    // Read employees from JSON file and create User records
+    const employeesPath = join(process.cwd(), 'data', 'employees.json');
+    const employeesData = JSON.parse(readFileSync(employeesPath, 'utf-8'));
+
+    for (const employee of employeesData) {
+      await prisma.user.upsert({
+        where: { email: employee.email },
+        update: {},
+        create: {
+          id: employee.id,
+          email: employee.email,
+          name: employee.name,
+          role: 'trainee',
+          organizationId: organization.id,
+        },
+      });
+      console.log('Created user from employees.json:', employee.name);
+    }
+
     // Read scenarios from JSON file
     const scenariosPath = join(process.cwd(), 'data', 'scenarios.json');
     const scenariosData = JSON.parse(readFileSync(scenariosPath, 'utf-8'));

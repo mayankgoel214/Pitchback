@@ -4,11 +4,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Scenario } from '@/lib/types/scenario';
 import { ConversationMessage } from '@/lib/types/session';
+import { useAuthContext } from '@/lib/contexts/AuthContext';
 
 export default function PracticeSessionPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const { employee } = useAuthContext();
 
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [scenarioLoading, setScenarioLoading] = useState(true);
@@ -116,13 +118,13 @@ export default function PracticeSessionPage() {
   }, []);
 
   useEffect(() => {
-    if (scenario && !sessionStarted && !scenarioLoading) {
+    if (scenario && !sessionStarted && !scenarioLoading && employee) {
       initializeSession();
     }
-  }, [scenario, sessionStarted, scenarioLoading]);
+  }, [scenario, sessionStarted, scenarioLoading, employee]);
 
   const initializeSession = async () => {
-    if (!scenario) return;
+    if (!scenario || !employee) return;
 
     try {
       const response = await fetch('/api/sessions', {
@@ -130,7 +132,7 @@ export default function PracticeSessionPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           scenario_id: scenario.id,
-          trainee_id: 'demo-user-001',
+          trainee_id: employee.id,
         }),
       });
 

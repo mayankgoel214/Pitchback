@@ -1,0 +1,98 @@
+🔑 [lib/ai/openai.ts] API Key Status: {
+  exists: true,
+  length: 164,
+  starts_with: 'sk-proj-',
+  ends_with: '6BwA',
+  has_whitespace: false,
+  is_project_key: true,
+  has_org_id: false,
+  has_project_id: false
+}
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+🧪 Evaluation System Tests
+
+============================================================
+
+📋 Test 1: Excellent handling with full resolution
+Expected: High scores 80-95, problem_resolved=true
+Running...
+
+✅ RESULTS:
+   Problem Resolved: ✓ YES
+   Resolution: The guest's core problem was that their room was not ready. The trainee resolved this by offering an upgrade to an executive suite and complimentary breakfast, which the guest accepted.
+   Overall Score: 90/100
+   - Empathy: 90/100
+   - Clarity: 85/100
+   - Problem-Solving: 95/100
+   - Professionalism: 90/100
+   ⚠️  Mistakes: Did not provide reason for room delay
+------------------------------------------------------------
+
+📋 Test 2: Just said hello - minimal effort
+Expected: Low scores <50, problem_resolved=false, problem_solving ~20
+Running...
+
+✅ RESULTS:
+   Problem Resolved: ✗ NO
+   Resolution: The guest's core problem was that their room was not ready. The trainee did not address or resolve this issue.
+   Overall Score: 12.5/100
+   - Empathy: 10/100
+   - Clarity: 10/100
+   - Problem-Solving: 0/100
+   - Professionalism: 30/100
+   ⚠️  Mistakes: Did not address the guest's core issue, Failed to show empathy, Did not offer any solutions
+------------------------------------------------------------
+
+📋 Test 3: Defensive and unprofessional
+Expected: Low professionalism, problem_resolved=false
+Running...
+
+✅ RESULTS:
+   Problem Resolved: ✗ NO
+   Resolution: The guest's core problem was that their room was not ready. The trainee did not address or resolve this issue, nor were any solutions offered.
+   Overall Score: 23/100
+   - Empathy: 20/100
+   - Clarity: 30/100
+   - Problem-Solving: 0/100
+   - Professionalism: 20/100
+   ⚠️  Mistakes: Failed to resolve guest's core issue, Lack of empathy and professionalism
+------------------------------------------------------------
+
+📋 Test 4: Empathy but no solution
+Expected: High empathy 70-80, low problem_solving 20-30, problem_resolved=false
+Running...
+
+✅ RESULTS:
+   Problem Resolved: ✗ NO
+   Resolution: The guest's core problem was that their room was not ready. The trainee expressed empathy but did not offer any solutions to resolve the issue.
+   Overall Score: 36/100
+   - Empathy: 85/100
+   - Clarity: 60/100
+   - Problem-Solving: 20/100
+   - Professionalism: 80/100
+   ⚠️  Mistakes: Did not offer any solutions, Lacked clarity in communication
+------------------------------------------------------------
+
+📋 Test 5: Solution but no empathy
+Expected: Low empathy 30-40, decent problem_solving 60-70
+Running...
+
+✅ RESULTS:
+   Problem Resolved: ✓ YES
+   Resolution: The guest's core problem was that their room was not ready. The trainee offered two solutions: an upgrade to a suite or waiting in the lounge. This addressed and resolved the guest's issue.
+   Overall Score: 75/100
+   - Empathy: 60/100
+   - Clarity: 80/100
+   - Problem-Solving: 85/100
+   - Professionalism: 75/100
+   ⚠️  Mistakes: Lack of empathy, No apology given
+------------------------------------------------------------
+
+============================================================
+📊 SUMMARY
+============================================================
+Total: 5 tests
+Passed: 5
+Failed: 0
+
+✅ Tests complete

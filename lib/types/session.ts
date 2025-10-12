@@ -40,6 +40,8 @@ export interface Scores {
 }
 
 export interface Evaluation {
+  problem_resolved: boolean;
+  resolution_summary: string;
   scores: Scores & { overall: number };
   detailed_feedback: {
     empathy: FeedbackDetail;
