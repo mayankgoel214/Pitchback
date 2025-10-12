@@ -150,8 +150,8 @@ export default function CreateScenarioPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-950">
-        <header className="bg-slate-900 border-b border-slate-700 sticky top-0 z-40">
+      <div className="min-h-screen bg-background">
+        <header className="border-b sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
             <Skeleton className="h-6 w-48" />
           </div>
@@ -171,15 +171,15 @@ export default function CreateScenarioPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-slate-900 border-b border-slate-700 sticky top-0 z-40 shadow-sm backdrop-blur-md bg-slate-900/90">
+      <header className="border-b sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex items-center justify-between">
             <Button
               variant="ghost"
               asChild
-              className="text-slate-400 hover:text-[#8B0000] transition-colors font-semibold"
+              className="transition-colors font-semibold"
             >
               <Link href="/" className="flex items-center">
                 <ArrowLeft className="w-5 h-5 mr-2" />
@@ -187,10 +187,10 @@ export default function CreateScenarioPage() {
               </Link>
             </Button>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#8B0000] to-[#6B0000] rounded-xl shadow-lg shadow-[#8B0000]/20 flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg flex items-center justify-center">
                 <Plus className="w-5 h-5 text-white" />
               </div>
-              <span className="text-sm font-bold text-slate-100">Create Scenario</span>
+              <span className="text-sm font-bold">Create Scenario</span>
             </div>
           </div>
         </div>
@@ -205,56 +205,55 @@ export default function CreateScenarioPage() {
               <div key={s} className="flex items-center flex-1">
                 <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold transition-all ${
                   step >= s
-                    ? 'bg-gradient-to-br from-[#8B0000] to-[#6B0000] text-white shadow-lg'
-                    : 'bg-slate-700 text-slate-400'
+                    ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg'
+                    : 'bg-muted text-muted-foreground'
                 }`}>
                   {s}
                 </div>
                 {s < 3 && (
                   <div className={`flex-1 h-1 mx-2 transition-all ${
-                    step > s ? 'bg-[#8B0000]' : 'bg-slate-700'
+                    step > s ? 'bg-gradient-to-r from-blue-600 to-indigo-600' : 'bg-muted'
                   }`} />
                 )}
               </div>
             ))}
           </div>
           <div className="flex justify-between text-sm">
-            <span className={step >= 1 ? 'text-slate-100 font-semibold' : 'text-slate-500'}>Basic Details</span>
-            <span className={step >= 2 ? 'text-slate-100 font-semibold' : 'text-slate-500'}>Content</span>
-            <span className={step >= 3 ? 'text-slate-100 font-semibold' : 'text-slate-500'}>Settings & Privacy</span>
+            <span className={step >= 1 ? 'font-semibold' : 'text-muted-foreground'}>Basic Details</span>
+            <span className={step >= 2 ? 'font-semibold' : 'text-muted-foreground'}>Content</span>
+            <span className={step >= 3 ? 'font-semibold' : 'text-muted-foreground'}>Settings & Privacy</span>
           </div>
         </div>
 
         {/* Form Steps */}
-        <Card className="bg-slate-800 border-slate-700">
+        <Card>
           <CardContent className="pt-8">
             {/* Step 1: Basic Details */}
             {step === 1 && (
               <div className="space-y-6">
                 <CardHeader className="px-0 pt-0">
-                  <CardTitle className="text-2xl text-slate-100">Scenario Basic Information</CardTitle>
-                  <CardDescription className="text-slate-400">Set up the foundational details for your training scenario</CardDescription>
+                  <CardTitle className="text-2xl">Scenario Basic Information</CardTitle>
+                  <CardDescription>Set up the foundational details for your training scenario</CardDescription>
                 </CardHeader>
 
                 <div className="space-y-2">
-                  <Label htmlFor="title" className="text-slate-300 font-semibold">Scenario Title</Label>
+                  <Label htmlFor="title" className="font-semibold">Scenario Title</Label>
                   <Input
                     id="title"
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="e.g., Handling a Billing Dispute"
-                    className="bg-slate-700 border-slate-600 text-slate-100 placeholder:text-slate-500 focus-visible:ring-[#8B0000]"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="category" className="text-slate-300 font-semibold">Category</Label>
+                  <Label htmlFor="category" className="font-semibold">Category</Label>
                   <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger id="category" className="bg-slate-700 border-slate-600 text-slate-100 focus:ring-[#8B0000]">
+                    <SelectTrigger id="category">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-700 border-slate-600">
+                    <SelectContent>
                       <SelectItem value="angry_guests">Angry Guests</SelectItem>
                       <SelectItem value="language_barriers">Language Barriers</SelectItem>
                       <SelectItem value="emergencies">Emergencies</SelectItem>
@@ -266,7 +265,7 @@ export default function CreateScenarioPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="text-slate-300 font-semibold">Difficulty Level</Label>
+                  <Label className="font-semibold">Difficulty Level</Label>
                   <RadioGroup value={difficulty} onValueChange={(value) => setDifficulty(value as 'beginner' | 'intermediate' | 'advanced')}>
                     <div className="grid grid-cols-3 gap-4">
                       {(['beginner', 'intermediate', 'advanced'] as const).map((level) => (
@@ -275,8 +274,8 @@ export default function CreateScenarioPage() {
                           htmlFor={level}
                           className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all cursor-pointer ${
                             difficulty === level
-                              ? 'border-[#8B0000] bg-red-950/50 text-slate-100'
-                              : 'border-slate-600 hover:border-slate-500 text-slate-300'
+                              ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/50'
+                              : 'border-border hover:border-blue-400'
                           }`}
                         >
                           <RadioGroupItem value={level} id={level} className="sr-only" />
@@ -290,7 +289,7 @@ export default function CreateScenarioPage() {
                 <Button
                   onClick={nextStep}
                   disabled={!title || !category}
-                  className="w-full bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white font-bold h-12"
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold h-12"
                 >
                   Continue
                 </Button>
@@ -301,36 +300,36 @@ export default function CreateScenarioPage() {
           {step === 2 && (
             <div className="space-y-6">
               <CardHeader className="px-0 pt-0">
-                <CardTitle className="text-2xl text-slate-100">Scenario Content</CardTitle>
-                <CardDescription className="text-slate-400">Define the scenario details and AI guest behavior</CardDescription>
+                <CardTitle className="text-2xl">Scenario Content</CardTitle>
+                <CardDescription>Define the scenario details and AI guest behavior</CardDescription>
               </CardHeader>
 
               <div className="space-y-2">
-                <Label htmlFor="context" className="text-slate-300 font-semibold">Context / Situation</Label>
+                <Label htmlFor="context" className="font-semibold">Context / Situation</Label>
                 <Textarea
                   id="context"
                   value={context}
                   onChange={(e) => setContext(e.target.value)}
                   placeholder="Describe the situation the trainee will encounter..."
                   rows={4}
-                  className="bg-slate-700 border-slate-600 text-slate-100 placeholder:text-slate-500 focus-visible:ring-[#8B0000] resize-none"
+                  className="resize-none"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="aiOpening" className="text-slate-300 font-semibold">AI Guest Opening Line</Label>
+                <Label htmlFor="aiOpening" className="font-semibold">AI Guest Opening Line</Label>
                 <Textarea
                   id="aiOpening"
                   value={aiGuestOpening}
                   onChange={(e) => setAiGuestOpening(e.target.value)}
                   placeholder="What will the AI guest say to start the conversation?"
                   rows={3}
-                  className="bg-slate-700 border-slate-600 text-slate-100 placeholder:text-slate-500 focus-visible:ring-[#8B0000] resize-none"
+                  className="resize-none"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-slate-300 font-semibold">Learning Objectives</Label>
+                <Label className="font-semibold">Learning Objectives</Label>
                 {learningObjectives.map((obj, index) => (
                   <div key={index} className="flex gap-2 mb-2">
                     <Input
@@ -338,7 +337,7 @@ export default function CreateScenarioPage() {
                       value={obj}
                       onChange={(e) => updateLearningObjective(index, e.target.value)}
                       placeholder={`Learning objective ${index + 1}`}
-                      className="flex-1 bg-slate-700 border-slate-600 text-slate-100 placeholder:text-slate-500 focus-visible:ring-[#8B0000]"
+                      className="flex-1"
                     />
                     {learningObjectives.length > 1 && (
                       <Button
@@ -357,7 +356,7 @@ export default function CreateScenarioPage() {
                   type="button"
                   variant="outline"
                   onClick={addLearningObjective}
-                  className="mt-2 bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600 hover:text-slate-100"
+                  className="mt-2"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Another Objective
@@ -365,24 +364,23 @@ export default function CreateScenarioPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="personality" className="text-slate-300 font-semibold">Guest Personality Traits (comma-separated)</Label>
+                <Label htmlFor="personality" className="font-semibold">Guest Personality Traits (comma-separated)</Label>
                 <Input
                   id="personality"
                   type="text"
                   value={guestPersonality}
                   onChange={(e) => setGuestPersonality(e.target.value)}
                   placeholder="e.g., frustrated, tired, professional"
-                  className="bg-slate-700 border-slate-600 text-slate-100 placeholder:text-slate-500 focus-visible:ring-[#8B0000]"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="tone" className="text-slate-300 font-semibold">Guest Tone</Label>
+                <Label htmlFor="tone" className="font-semibold">Guest Tone</Label>
                 <Select value={guestTone} onValueChange={setGuestTone}>
-                  <SelectTrigger id="tone" className="bg-slate-700 border-slate-600 text-slate-100 focus:ring-[#8B0000]">
+                  <SelectTrigger id="tone">
                     <SelectValue placeholder="Select tone" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-700 border-slate-600">
+                  <SelectContent>
                     <SelectItem value="angry">Angry</SelectItem>
                     <SelectItem value="confused">Confused</SelectItem>
                     <SelectItem value="polite">Polite</SelectItem>
@@ -397,14 +395,14 @@ export default function CreateScenarioPage() {
                   type="button"
                   variant="outline"
                   onClick={prevStep}
-                  className="flex-1 bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600 hover:text-slate-100 h-12"
+                  className="flex-1 h-12"
                 >
                   Back
                 </Button>
                 <Button
                   onClick={nextStep}
                   disabled={!context || !aiGuestOpening || learningObjectives.filter(o => o.trim()).length === 0}
-                  className="flex-1 bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white font-bold h-12"
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold h-12"
                 >
                   Continue
                 </Button>
@@ -416,26 +414,26 @@ export default function CreateScenarioPage() {
           {step === 3 && (
             <div className="space-y-6">
               <CardHeader className="px-0 pt-0">
-                <CardTitle className="text-2xl text-slate-100">Final Settings & Privacy</CardTitle>
-                <CardDescription className="text-slate-400">Choose who can access your scenario</CardDescription>
+                <CardTitle className="text-2xl">Final Settings & Privacy</CardTitle>
+                <CardDescription>Choose who can access your scenario</CardDescription>
               </CardHeader>
 
               <div className="space-y-3">
-                <Label className="text-slate-300 font-semibold">Who can access this scenario?</Label>
+                <Label className="font-semibold">Who can access this scenario?</Label>
                 <RadioGroup value={visibility} onValueChange={(value) => setVisibility(value as 'PRIVATE' | 'ORGANIZATION' | 'PUBLIC')}>
                   <Label
                     htmlFor="private"
                     className={`flex items-start gap-4 p-5 rounded-xl border-2 transition-all cursor-pointer ${
                       visibility === 'PRIVATE'
-                        ? 'border-[#8B0000] bg-red-950/50'
-                        : 'border-slate-600 hover:border-slate-500'
+                        ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/50'
+                        : 'border-border hover:border-blue-400'
                     }`}
                   >
                     <RadioGroupItem value="PRIVATE" id="private" className="mt-1" />
-                    <Lock className="w-6 h-6 text-slate-300 flex-shrink-0 mt-0.5" />
+                    <Lock className="w-6 h-6 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <div className="font-bold text-slate-100 mb-1">Private (Only Me)</div>
-                      <div className="text-sm text-slate-400">Only you can see and use this scenario</div>
+                      <div className="font-bold mb-1">Private (Only Me)</div>
+                      <div className="text-sm text-muted-foreground">Only you can see and use this scenario</div>
                     </div>
                   </Label>
 
@@ -444,15 +442,15 @@ export default function CreateScenarioPage() {
                       htmlFor="organization"
                       className={`flex items-start gap-4 p-5 rounded-xl border-2 transition-all cursor-pointer ${
                         visibility === 'ORGANIZATION'
-                          ? 'border-[#8B0000] bg-red-950/50'
-                          : 'border-slate-600 hover:border-slate-500'
+                          ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/50'
+                          : 'border-border hover:border-blue-400'
                       }`}
                     >
                       <RadioGroupItem value="ORGANIZATION" id="organization" className="mt-1" />
-                      <Users className="w-6 h-6 text-slate-300 flex-shrink-0 mt-0.5" />
+                      <Users className="w-6 h-6 flex-shrink-0 mt-0.5" />
                       <div className="flex-1">
-                        <div className="font-bold text-slate-100 mb-1">Organization (Admin Only)</div>
-                        <div className="text-sm text-slate-400">All members of {user.organization?.name} can see and use this scenario</div>
+                        <div className="font-bold mb-1">Organization (Admin Only)</div>
+                        <div className="text-sm text-muted-foreground">All members of {user.organization?.name} can see and use this scenario</div>
                       </div>
                     </Label>
                   )}
@@ -461,24 +459,24 @@ export default function CreateScenarioPage() {
                     htmlFor="public"
                     className={`flex items-start gap-4 p-5 rounded-xl border-2 transition-all cursor-pointer ${
                       visibility === 'PUBLIC'
-                        ? 'border-[#8B0000] bg-red-950/50'
-                        : 'border-slate-600 hover:border-slate-500'
+                        ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/50'
+                        : 'border-border hover:border-blue-400'
                     }`}
                   >
                     <RadioGroupItem value="PUBLIC" id="public" className="mt-1" />
-                    <Globe className="w-6 h-6 text-slate-300 flex-shrink-0 mt-0.5" />
+                    <Globe className="w-6 h-6 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <div className="font-bold text-slate-100 mb-1">Public (Everyone)</div>
-                      <div className="text-sm text-slate-400">Anyone can see and use this scenario</div>
+                      <div className="font-bold mb-1">Public (Everyone)</div>
+                      <div className="text-sm text-muted-foreground">Anyone can see and use this scenario</div>
                     </div>
                   </Label>
                 </RadioGroup>
               </div>
 
               {error && (
-                <Alert variant="destructive" className="bg-red-950/50 border-red-500">
+                <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertDescription className="text-red-300">
+                  <AlertDescription>
                     {error}
                   </AlertDescription>
                 </Alert>
@@ -489,14 +487,14 @@ export default function CreateScenarioPage() {
                   type="button"
                   variant="outline"
                   onClick={prevStep}
-                  className="flex-1 bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600 hover:text-slate-100 h-12"
+                  className="flex-1 h-12"
                 >
                   Back
                 </Button>
                 <Button
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="flex-1 bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white font-bold h-12"
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold h-12"
                 >
                   {isSubmitting ? (
                     <>

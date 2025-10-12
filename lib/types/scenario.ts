@@ -11,6 +11,11 @@ export interface Scenario {
   context_background: string;
   success_criteria: any; // JSON object
   evaluation_rubric: any; // JSON object
+  learning_objectives?: string[]; // Optional field for backwards compatibility
+  estimated_duration?: number; // Optional field for backwards compatibility
+  max_turns?: number; // Optional field for backwards compatibility
+  visibility?: string; // PUBLIC, ORGANIZATION, PRIVATE
+  created_by?: string; // Creator name
 }
 
 export interface GuestPersona {

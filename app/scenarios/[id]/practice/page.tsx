@@ -1,10 +1,43 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Scenario } from '@/lib/types/scenario';
 import { ConversationMessage } from '@/lib/types/session';
 import { useAuthContext } from '@/lib/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import {
+  MessageCircle,
+  User,
+  Info,
+  Lightbulb,
+  Clock,
+  Eye,
+  EyeOff,
+  Mic,
+  Square,
+  Activity,
+  TrendingUp,
+  TrendingDown,
+  AlertCircle,
+  CheckCircle2,
+  Menu,
+  X
+} from 'lucide-react';
 
 export default function PracticeSessionPage() {
   const params = useParams();
@@ -26,12 +59,14 @@ export default function PracticeSessionPage() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [currentTranscript, setCurrentTranscript] = useState('');
-  const [showTranscript, setShowTranscript] = useState(false);
+
+  // Drawer states
+  const [showConversationDrawer, setShowConversationDrawer] = useState(false);
+  const [showInsightsDrawer, setShowInsightsDrawer] = useState(false);
 
   // Advanced AI tracking states
   const [emotionContext, setEmotionContext] = useState<any>(null);
   const [aiInsights, setAiInsights] = useState<any>(null);
-  const [showAiInsights, setShowAiInsights] = useState(true);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -39,6 +74,8 @@ export default function PracticeSessionPage() {
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const isManuallyStoppingRef = useRef(false);
+  const isListeningRef = useRef(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -99,11 +136,33 @@ export default function PracticeSessionPage() {
 
         recognition.onerror = (event: any) => {
           console.error('Speech recognition error:', event.error);
+          // Don't automatically restart on error
+          if (recognitionRef.current && isListeningRef.current) {
+            try {
+              recognitionRef.current.abort();
+            } catch (e) {
+              // Ignore
+            }
+          }
+          isListeningRef.current = false;
           setIsListening(false);
         };
 
         recognition.onend = () => {
-          setIsListening(false);
+          // If we're still in listening state and didn't manually stop,
+          // restart the recognition (for continuous listening)
+          if (!isManuallyStoppingRef.current && isListeningRef.current) {
+            try {
+              recognitionRef.current.start();
+            } catch (error) {
+              console.error('Failed to restart recognition:', error);
+              isListeningRef.current = false;
+              setIsListening(false);
+            }
+          } else {
+            isListeningRef.current = false;
+            setIsListening(false);
+          }
         };
 
         recognitionRef.current = recognition;
@@ -112,7 +171,12 @@ export default function PracticeSessionPage() {
 
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        isManuallyStoppingRef.current = true;
+        try {
+          recognitionRef.current.abort();
+        } catch (error) {
+          console.error('Failed to abort recognition on cleanup:', error);
+        }
       }
     };
   }, []);
@@ -247,25 +311,60 @@ export default function PracticeSessionPage() {
   };
 
   // Start listening to trainee
-  const startListening = () => {
-    if (recognitionRef.current && !isListening) {
+  const startListening = useCallback(() => {
+    if (recognitionRef.current && !isListeningRef.current) {
       setCurrentTranscript('');
-      recognitionRef.current.start();
-      setIsListening(true);
-    }
-  };
-
-  // Stop listening and process the message
-  const stopListening = () => {
-    if (recognitionRef.current && isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-
-      if (currentTranscript.trim()) {
-        handleVoiceMessage(currentTranscript.trim());
+      isManuallyStoppingRef.current = false;
+      try {
+        recognitionRef.current.start();
+        isListeningRef.current = true;
+        setIsListening(true);
+      } catch (error) {
+        console.error('Failed to start recognition:', error);
+        isListeningRef.current = false;
       }
     }
-  };
+  }, []);
+
+  // Stop listening and process the message
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current && isListeningRef.current) {
+      isManuallyStoppingRef.current = true;
+      isListeningRef.current = false;
+
+      // Save the transcript before aborting
+      const finalTranscript = currentTranscript.trim();
+
+      try {
+        // Use abort() instead of stop() to immediately terminate recognition
+        // abort() doesn't trigger onend or send final results
+        recognitionRef.current.abort();
+      } catch (error) {
+        console.error('Failed to abort recognition:', error);
+      }
+
+      setIsListening(false);
+      setCurrentTranscript('');
+
+      if (finalTranscript) {
+        handleVoiceMessage(finalTranscript);
+      }
+
+      // Reset the flag after a short delay
+      setTimeout(() => {
+        isManuallyStoppingRef.current = false;
+      }, 100);
+    }
+  }, [currentTranscript]);
+
+  // Toggle listening - uses ref to avoid stale closure issues
+  const toggleListening = useCallback(() => {
+    if (isListeningRef.current) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  }, [startListening, stopListening]);
 
   // Handle voice message from trainee
   const handleVoiceMessage = async (message: string) => {
@@ -375,373 +474,450 @@ export default function PracticeSessionPage() {
 
   if (scenarioLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
-          <p className="text-slate-400">Loading scenario...</p>
-        </div>
+      <div className="min-h-screen bg-background">
+        <header className="border-b sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="max-w-6xl mx-auto px-4 py-4">
+            <Skeleton className="h-8 w-64" />
+          </div>
+        </header>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+          <Skeleton className="h-32 w-full" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Skeleton className="h-96 lg:col-span-2" />
+            <Skeleton className="h-96" />
+          </div>
+        </main>
       </div>
     );
   }
 
   if (!scenario) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
-        <p className="text-slate-400">Scenario not found</p>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              Scenario Not Found
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">The requested scenario could not be found.</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col">
-      {/* Header */}
-      <header className="bg-slate-900 border-b border-slate-700 sticky top-0 z-40 shadow-sm backdrop-blur-md bg-slate-900/90">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <div className="p-2.5 bg-gradient-to-br from-[#000814] to-[#003566] rounded-xl shadow-lg">
-              <svg className="w-5 h-5 text-cyan-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-slate-100">{scenario.title}</h1>
-              <p className="text-sm text-slate-400">Live Training Session</p>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex flex-col relative overflow-hidden">
+      {/* Minimal Translucent Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/60 backdrop-blur-xl border-b border-border/40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className="bg-background/50 backdrop-blur-sm">
+              {scenario.title}
+            </Badge>
+            <Badge variant="secondary" className="hidden sm:inline-flex bg-muted/50 backdrop-blur-sm">
+              <Info className="w-3 h-3 mr-1" />
+              {scenario.category}
+            </Badge>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 px-5 py-2.5 bg-slate-800 rounded-xl border border-slate-700 shadow-sm">
-              <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              <span className="text-base font-bold text-slate-100">{turnCount}</span>
-              <span className="text-sm text-slate-400">/ 10</span>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-background/50 backdrop-blur-sm rounded-full border border-border/40">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-bold">{turnCount}</span>
+              <span className="text-xs text-muted-foreground">/ 10</span>
             </div>
-            <button
+            <Button
               onClick={endSession}
-              className="px-5 py-2.5 bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-[#8B0000]/20 hover:shadow-xl hover:shadow-[#8B0000]/30"
+              variant="destructive"
+              size="sm"
+              className="font-bold"
             >
               End Session
-            </button>
+            </Button>
           </div>
         </div>
       </header>
 
-      {/* Context Banner */}
-      <div className="bg-blue-950/50 border-b border-blue-900 py-3">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-sm text-blue-200">
-              <strong className="font-semibold">Context:</strong> {scenario.context_background}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Voice Interaction Area */}
-      <div className="flex-1 max-w-7xl mx-auto w-full py-8 px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-280px)]">
-
-          {/* Avatar Display - Center/Left */}
-          <div className="lg:col-span-2 bg-slate-800 rounded-3xl shadow-xl border border-slate-700 overflow-hidden flex flex-col">
-            {/* Avatar Area */}
-            <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-slate-800 via-slate-750 to-slate-800 relative">
-              {/* Animated background effect */}
-              <div className="absolute inset-0">
-                <div className={`absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl transition-all duration-1000 ${
-                  isSpeaking ? 'bg-cyan-500/20 animate-pulse' : 'bg-cyan-500/5'
-                }`}></div>
-                <div className={`absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full blur-3xl transition-all duration-1000 ${
-                  isSpeaking ? 'bg-blue-500/20 animate-pulse' : 'bg-blue-500/5'
-                }`}></div>
-              </div>
-
-              {/* Avatar Circle */}
-              <div className="relative z-10">
-                <div className={`w-64 h-64 rounded-full bg-gradient-to-br from-[#000814] to-[#003566] border-4 flex items-center justify-center transition-all duration-300 ${
-                  isSpeaking
-                    ? 'border-cyan-400 shadow-2xl shadow-cyan-500/50 scale-105'
-                    : isLoading
-                    ? 'border-blue-400 shadow-xl shadow-blue-500/30'
-                    : 'border-slate-600 shadow-lg'
-                }`}>
-                  <svg className={`w-32 h-32 transition-all duration-300 ${
-                    isSpeaking ? 'text-cyan-300' : 'text-slate-400'
-                  }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-
-                {/* Status Indicators */}
-                <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2">
-                  {isSpeaking && (
-                    <div className="px-6 py-2 bg-cyan-500 text-white rounded-full font-semibold text-sm shadow-lg flex items-center gap-2 animate-pulse">
-                      <div className="flex gap-1">
-                        <div className="w-1 h-4 bg-white rounded-full animate-bounce"></div>
-                        <div className="w-1 h-4 bg-white rounded-full animate-bounce delay-100"></div>
-                        <div className="w-1 h-4 bg-white rounded-full animate-bounce delay-200"></div>
-                      </div>
-                      <span>Guest Speaking...</span>
-                    </div>
-                  )}
-                  {isLoading && !isSpeaking && (
-                    <div className="px-6 py-2 bg-blue-500 text-white rounded-full font-semibold text-sm shadow-lg">
-                      Thinking...
-                    </div>
-                  )}
-                  {!isSpeaking && !isLoading && !isListening && (
-                    <div className="px-6 py-2 bg-slate-700 text-slate-300 rounded-full font-semibold text-sm shadow-lg border border-slate-600">
-                      Ready to listen
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Voice Controls */}
-            <div className="p-6 bg-slate-900 border-t border-slate-700">
-              <div className="flex items-center justify-center gap-6">
-                {/* Microphone Button */}
-                <div className="text-center">
-                  <button
-                    onClick={isListening ? stopListening : startListening}
-                    disabled={isSpeaking || isLoading}
-                    className={`w-20 h-20 rounded-full font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-2xl ${
-                      isListening
-                        ? 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-red-500/50 animate-pulse'
-                        : 'bg-gradient-to-br from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white shadow-[#8B0000]/50 hover:scale-110'
-                    }`}
-                  >
-                    {isListening ? (
-                      <svg className="w-10 h-10 mx-auto" fill="currentColor" viewBox="0 0 24 24">
-                        <rect x="6" y="6" width="12" height="12" rx="2" />
-                      </svg>
-                    ) : (
-                      <svg className="w-10 h-10 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                      </svg>
-                    )}
-                  </button>
-                  <p className="text-sm text-slate-300 mt-2 font-semibold">
-                    {isListening ? 'Click to Stop' : 'Click to Speak'}
-                  </p>
-                </div>
-
-                {/* Toggle Buttons */}
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowTranscript(!showTranscript)}
-                    className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm font-semibold transition-all border border-slate-600"
-                  >
-                    {showTranscript ? 'Hide' : 'Show'} Chat
-                  </button>
-                  <button
-                    onClick={() => setShowAiInsights(!showAiInsights)}
-                    className="px-4 py-2 bg-cyan-900/50 hover:bg-cyan-800 text-cyan-200 rounded-lg text-sm font-bold transition-all border-2 border-cyan-600"
-                  >
-                    {showAiInsights ? 'Hide' : 'Show'} AI Insights
-                  </button>
-                </div>
-              </div>
-
-              {/* Live Transcript Display */}
-              {isListening && currentTranscript && (
-                <div className="mt-4 p-4 bg-slate-800 border-2 border-emerald-500 rounded-2xl">
-                  <p className="text-xs text-emerald-400 font-semibold mb-1">You're saying:</p>
-                  <p className="text-slate-100 text-sm">{currentTranscript}</p>
-                </div>
-              )}
-            </div>
+      {/* Main Content Area - Centered Full Screen */}
+      <main className="flex-1 flex items-center justify-center pt-20 pb-32 px-4">
+        <div className="relative w-full max-w-2xl">
+          {/* Animated Background Gradients */}
+          <div className="absolute inset-0 -z-10">
+            <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full blur-3xl transition-all duration-1000 ${
+              aiInsights?.current_emotion?.includes('angry')
+                ? 'bg-red-500/20 animate-pulse'
+                : aiInsights?.current_emotion?.includes('calm')
+                ? 'bg-emerald-500/20'
+                : 'bg-blue-500/20'
+            }`}></div>
+            <div className={`absolute bottom-0 right-1/4 w-[400px] h-[400px] rounded-full blur-3xl transition-all duration-1000 ${
+              isSpeaking ? 'bg-indigo-500/20 animate-pulse' : 'bg-indigo-500/10'
+            }`}></div>
           </div>
 
-          {/* Conversation Transcript - Right Sidebar */}
-          {showTranscript && (
-            <div className="lg:col-span-1 bg-slate-800 rounded-3xl shadow-xl border border-slate-700 p-6 overflow-hidden flex flex-col">
-              <h3 className="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                </svg>
-                Conversation
-              </h3>
-
-              <div className="flex-1 overflow-y-auto space-y-3 pr-2">
-                {conversation.map((message, index) => (
-                  <div key={index} className={`${
-                    message.speaker === 'trainee' ? 'text-right' : 'text-left'
-                  }`}>
-                    <div className={`inline-block max-w-[85%] rounded-xl px-4 py-2 ${
-                      message.speaker === 'trainee'
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-slate-700 text-slate-100 border border-slate-600'
-                    }`}>
-                      <p className={`text-xs font-semibold mb-1 ${
-                        message.speaker === 'trainee' ? 'text-emerald-100' : 'text-slate-400'
-                      }`}>
-                        {message.speaker === 'trainee' ? 'You' : 'Guest'}
-                      </p>
-                      <p className="text-sm">{message.text}</p>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1 px-1">
-                      {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                ))}
-                <div ref={messagesEndRef} />
-              </div>
-            </div>
-          )}
-
-          {/* AI Insights Panel - NEW ADVANCED FEATURE */}
-          {showAiInsights && aiInsights && (
-            <div className="lg:col-span-1 bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl shadow-2xl border-2 border-cyan-500/30 p-6 overflow-hidden flex flex-col">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                  AI Insights
-                </h3>
-                <span className="px-2 py-1 bg-cyan-900/50 text-cyan-300 text-xs font-bold rounded-lg border border-cyan-700">
-                  LIVE
-                </span>
-              </div>
-
-              <div className="flex-1 space-y-4 overflow-y-auto pr-2">
-                {/* Guest Emotion State */}
-                <div className="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
-                  <p className="text-xs font-bold text-slate-400 mb-2">GUEST EMOTIONAL STATE</p>
-                  <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${
+          {/* Floating AI Metrics - Above Avatar */}
+          {aiInsights && (
+            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-full max-w-md">
+              <div className="flex items-center justify-center gap-3 flex-wrap">
+                {/* Emotion Badge */}
+                <Card className="bg-background/60 backdrop-blur-xl border-border/40 shadow-lg">
+                  <CardContent className="px-4 py-2 flex items-center gap-2">
+                    <div className={`w-2.5 h-2.5 rounded-full ${
                       aiInsights.current_emotion?.includes('angry') ? 'bg-red-500 animate-pulse' :
                       aiInsights.current_emotion?.includes('frustrated') ? 'bg-orange-500' :
                       aiInsights.current_emotion?.includes('calm') || aiInsights.current_emotion?.includes('satisfied') ? 'bg-green-500' :
                       aiInsights.current_emotion?.includes('happy') ? 'bg-emerald-500' :
                       'bg-yellow-500'
                     }`}></div>
-                    <p className="text-base font-bold text-slate-100 capitalize">
+                    <span className="text-xs font-bold capitalize">
                       {aiInsights.current_emotion?.replace(/_/g, ' ') || 'Neutral'}
-                    </p>
-                  </div>
-                </div>
+                    </span>
+                  </CardContent>
+                </Card>
 
-                {/* Escalation Meter */}
-                <div className="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
-                  <p className="text-xs font-bold text-slate-400 mb-2">ESCALATION LEVEL</p>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-400">Current</span>
-                      <span className="font-bold text-slate-100">{aiInsights.escalation_level}/100</span>
-                    </div>
-                    <div className="w-full bg-slate-600 rounded-full h-2.5">
-                      <div
-                        className={`h-2.5 rounded-full transition-all duration-500 ${
-                          aiInsights.escalation_level >= 70 ? 'bg-gradient-to-r from-red-600 to-red-500' :
-                          aiInsights.escalation_level >= 40 ? 'bg-gradient-to-r from-orange-600 to-orange-500' :
-                          'bg-gradient-to-r from-green-600 to-green-500'
-                        }`}
-                        style={{ width: `${aiInsights.escalation_level}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
+                {/* Escalation Level */}
+                <Card className="bg-background/60 backdrop-blur-xl border-border/40 shadow-lg">
+                  <CardContent className="px-4 py-2 flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-xs font-bold">{aiInsights.escalation_level}%</span>
+                  </CardContent>
+                </Card>
 
-                {/* De-escalation Progress */}
-                <div className="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
-                  <p className="text-xs font-bold text-slate-400 mb-2">DE-ESCALATION PROGRESS</p>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-400">Progress</span>
-                      <span className="font-bold text-emerald-400">{Math.round(aiInsights.de_escalation_progress)}/100</span>
-                    </div>
-                    <div className="w-full bg-slate-600 rounded-full h-2.5">
-                      <div
-                        className="h-2.5 rounded-full bg-gradient-to-r from-emerald-600 to-emerald-500 transition-all duration-500"
-                        style={{ width: `${aiInsights.de_escalation_progress}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Trainee Performance Score */}
-                <div className="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
-                  <p className="text-xs font-bold text-slate-400 mb-2">YOUR PERFORMANCE</p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`text-3xl font-bold ${
-                        aiInsights.trainee_performance >= 70 ? 'text-green-400' :
-                        aiInsights.trainee_performance >= 50 ? 'text-yellow-400' :
-                        'text-red-400'
-                      }`}>
-                        {Math.round(aiInsights.trainee_performance)}
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-400">out of 100</p>
-                        <p className="text-sm font-semibold text-slate-200">
-                          {aiInsights.trainee_performance >= 70 ? 'Excellent' :
-                           aiInsights.trainee_performance >= 50 ? 'Good' : 'Needs Work'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Real-time Tips */}
-                {aiInsights.escalation_level > 50 && (
-                  <div className="bg-amber-900/30 rounded-xl p-4 border-2 border-amber-600/50">
-                    <p className="text-xs font-bold text-amber-400 mb-2 flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                      </svg>
-                      SUGGESTION
-                    </p>
-                    <p className="text-xs text-amber-200">
-                      Guest is still escalated. Try showing more empathy and offering concrete solutions.
-                    </p>
-                  </div>
-                )}
-
-                {aiInsights.de_escalation_progress > 60 && (
-                  <div className="bg-emerald-900/30 rounded-xl p-4 border-2 border-emerald-600/50">
-                    <p className="text-xs font-bold text-emerald-400 mb-2 flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                      GREAT JOB!
-                    </p>
-                    <p className="text-xs text-emerald-200">
-                      You're doing well! The guest is calming down. Keep up the professional approach.
-                    </p>
-                  </div>
-                )}
+                {/* Performance Score */}
+                <Card className="bg-background/60 backdrop-blur-xl border-border/40 shadow-lg">
+                  <CardContent className="px-4 py-2 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span className="text-xs font-bold">{Math.round(aiInsights.trainee_performance)}%</span>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Tips Section */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-t border-slate-700 py-5">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-gradient-to-br from-cyan-900/50 to-blue-900/50 rounded-xl border border-cyan-700 shadow-lg">
-              <svg className="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-slate-100 mb-1.5 flex items-center gap-2">
-                <span className="px-2 py-1 bg-cyan-900/50 text-cyan-300 border border-cyan-700 rounded-lg text-xs font-semibold">PRO TIP</span>
-                Best Practices for This Scenario
-              </p>
-              <p className="text-sm text-slate-300 leading-relaxed">
-                <strong className="text-slate-100">Demonstrate empathy</strong>, communicate clearly, <strong className="text-slate-100">offer practical solutions</strong>, and maintain professionalism throughout the interaction. Listen actively and respond thoughtfully to the guest's concerns.
-              </p>
+          {/* Center Stage - Large Avatar */}
+          <div className="flex flex-col items-center justify-center space-y-6">
+            {/* Guest Speech Bubble */}
+            {isSpeaking && conversation.length > 0 && (
+              <Card className="bg-background/80 backdrop-blur-xl border-border/40 shadow-2xl max-w-lg animate-in fade-in slide-in-from-bottom-4">
+                <CardContent className="pt-4">
+                  <p className="text-sm leading-relaxed">
+                    {conversation[conversation.length - 1]?.speaker === 'ai_guest'
+                      ? conversation[conversation.length - 1]?.text
+                      : scenario.ai_guest_opening}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Avatar */}
+            <div className="relative">
+              <Avatar className={`w-80 h-80 transition-all duration-500 ${
+                isSpeaking
+                  ? 'ring-8 ring-blue-600/50 shadow-2xl shadow-blue-500/50 scale-105'
+                  : isLoading
+                  ? 'ring-8 ring-indigo-600/50 shadow-2xl shadow-indigo-500/30 animate-pulse'
+                  : 'ring-4 ring-border/40 shadow-xl'
+              }`}>
+                <AvatarFallback className="bg-gradient-to-br from-blue-600 to-indigo-600 text-white">
+                  <User className={`w-40 h-40 transition-all duration-500 ${
+                    isSpeaking ? 'scale-110' : ''
+                  }`} />
+                </AvatarFallback>
+              </Avatar>
+
+              {/* Status Badge Below Avatar */}
+              <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                {isSpeaking && (
+                  <Badge className="px-5 py-2 bg-blue-600 hover:bg-blue-600 text-white font-semibold shadow-xl flex items-center gap-2 animate-pulse">
+                    <div className="flex gap-1">
+                      <div className="w-1 h-3 bg-white rounded-full animate-bounce"></div>
+                      <div className="w-1 h-3 bg-white rounded-full animate-bounce delay-100"></div>
+                      <div className="w-1 h-3 bg-white rounded-full animate-bounce delay-200"></div>
+                    </div>
+                    <span>Speaking...</span>
+                  </Badge>
+                )}
+                {isLoading && !isSpeaking && (
+                  <Badge className="px-5 py-2 bg-indigo-600 hover:bg-indigo-600 text-white font-semibold shadow-xl">
+                    Thinking...
+                  </Badge>
+                )}
+                {!isSpeaking && !isLoading && !isListening && (
+                  <Badge variant="outline" className="px-5 py-2 font-semibold shadow-xl bg-background/80 backdrop-blur-sm">
+                    Ready to listen
+                  </Badge>
+                )}
+                {isListening && (
+                  <Badge className="px-5 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold shadow-xl animate-pulse">
+                    Listening...
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
         </div>
+      </main>
+
+      {/* Fixed Bottom Control Bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-xl border-t border-border/40 pb-safe">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          {/* Live Transcript Display - Above Mic */}
+          {isListening && currentTranscript && (
+            <Card className="mb-4 border-2 border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/30 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2">
+              <CardContent className="pt-4">
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mb-1">
+                  You&apos;re saying:
+                </p>
+                <p className="text-sm font-medium">{currentTranscript}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="flex items-center justify-center gap-6">
+            {/* Left Toggle - Conversation */}
+            <Button
+              onClick={() => setShowConversationDrawer(true)}
+              variant="outline"
+              size="lg"
+              className="rounded-full bg-background/50 backdrop-blur-sm hover:bg-background/80"
+            >
+              <MessageCircle className="w-5 h-5" />
+            </Button>
+
+            {/* Center Mic Button - Hero Element */}
+            <div className="relative">
+              <Button
+                onClick={toggleListening}
+                disabled={isSpeaking || isLoading}
+                size="lg"
+                className={`w-24 h-24 rounded-full font-bold transition-all shadow-2xl relative ${
+                  isListening
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-red-500/50 animate-pulse scale-110'
+                    : 'bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:scale-110 shadow-blue-600/50'
+                }`}
+              >
+                {isListening ? (
+                  <Square className="w-12 h-12" />
+                ) : (
+                  <Mic className="w-12 h-12" />
+                )}
+              </Button>
+
+              {/* Waveform Animation Ring */}
+              {isListening && (
+                <div className="absolute inset-0 rounded-full border-4 border-red-400 animate-ping"></div>
+              )}
+            </div>
+
+            {/* Right Toggle - AI Insights */}
+            <Button
+              onClick={() => setShowInsightsDrawer(true)}
+              variant="outline"
+              size="lg"
+              className="rounded-full bg-background/50 backdrop-blur-sm hover:bg-background/80 border-blue-600 text-blue-600"
+            >
+              <Lightbulb className="w-5 h-5" />
+            </Button>
+          </div>
+
+          {/* Helper Text */}
+          <p className="text-center text-xs text-muted-foreground mt-4">
+            {isListening ? 'Tap to stop recording' : 'Tap microphone to speak'}
+          </p>
+        </div>
       </div>
+
+      {/* Conversation Drawer - Right Side */}
+      <Sheet open={showConversationDrawer} onOpenChange={setShowConversationDrawer}>
+        <SheetContent side="right" className="w-full sm:w-96 p-0">
+          <SheetHeader className="p-6 pb-4">
+            <SheetTitle className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5 text-blue-600" />
+              Conversation History
+            </SheetTitle>
+            <SheetDescription>
+              Full transcript of your training session
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-3">
+            {conversation.map((message, index) => (
+              <div key={index} className={`${
+                message.speaker === 'trainee' ? 'text-right' : 'text-left'
+              }`}>
+                <div className={`inline-block max-w-[85%] rounded-xl px-4 py-2 ${
+                  message.speaker === 'trainee'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-muted border'
+                }`}>
+                  <p className={`text-xs font-semibold mb-1 ${
+                    message.speaker === 'trainee' ? 'text-emerald-100' : 'text-muted-foreground'
+                  }`}>
+                    {message.speaker === 'trainee' ? 'You' : 'Guest'}
+                  </p>
+                  <p className="text-sm">{message.text}</p>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1 px-1">
+                  {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* AI Insights Drawer - Left Side */}
+      <Sheet open={showInsightsDrawer} onOpenChange={setShowInsightsDrawer}>
+        <SheetContent side="left" className="w-full sm:w-96 p-0">
+          <SheetHeader className="p-6 pb-4 border-b">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="flex items-center gap-2">
+                <Lightbulb className="w-5 h-5 text-blue-600" />
+                AI Insights
+              </SheetTitle>
+              <Badge className="bg-blue-600 hover:bg-blue-600 text-white">LIVE</Badge>
+            </div>
+            <SheetDescription>
+              Real-time performance analysis and tips
+            </SheetDescription>
+          </SheetHeader>
+
+          {aiInsights ? (
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+              {/* Guest Emotion State */}
+              <Card className="bg-muted/50">
+                <CardContent className="pt-4">
+                  <p className="text-xs font-bold text-muted-foreground mb-2">GUEST EMOTIONAL STATE</p>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${
+                        aiInsights.current_emotion?.includes('angry') ? 'bg-red-500 animate-pulse' :
+                        aiInsights.current_emotion?.includes('frustrated') ? 'bg-orange-500' :
+                        aiInsights.current_emotion?.includes('calm') || aiInsights.current_emotion?.includes('satisfied') ? 'bg-green-500' :
+                        aiInsights.current_emotion?.includes('happy') ? 'bg-emerald-500' :
+                        'bg-yellow-500'
+                      }`}></div>
+                      <p className="text-base font-bold capitalize">
+                        {aiInsights.current_emotion?.replace(/_/g, ' ') || 'Neutral'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Escalation Meter */}
+                <Card className="bg-muted/50">
+                  <CardContent className="pt-4">
+                    <p className="text-xs font-bold text-muted-foreground mb-2">ESCALATION LEVEL</p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Current</span>
+                        <span className="font-bold">{aiInsights.escalation_level}/100</span>
+                      </div>
+                      <Progress
+                        value={aiInsights.escalation_level}
+                        className={`h-2.5 ${
+                          aiInsights.escalation_level >= 70 ? '[&>div]:bg-gradient-to-r [&>div]:from-red-600 [&>div]:to-red-500' :
+                          aiInsights.escalation_level >= 40 ? '[&>div]:bg-gradient-to-r [&>div]:from-orange-600 [&>div]:to-orange-500' :
+                          '[&>div]:bg-gradient-to-r [&>div]:from-green-600 [&>div]:to-green-500'
+                        }`}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* De-escalation Progress */}
+                <Card className="bg-muted/50">
+                  <CardContent className="pt-4">
+                    <p className="text-xs font-bold text-muted-foreground mb-2">DE-ESCALATION PROGRESS</p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Progress</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{Math.round(aiInsights.de_escalation_progress)}/100</span>
+                      </div>
+                      <Progress
+                        value={aiInsights.de_escalation_progress}
+                        className="h-2.5 [&>div]:bg-gradient-to-r [&>div]:from-emerald-600 [&>div]:to-emerald-500"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Trainee Performance Score */}
+                <Card className="bg-muted/50">
+                  <CardContent className="pt-4">
+                    <p className="text-xs font-bold text-muted-foreground mb-2">YOUR PERFORMANCE</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`text-3xl font-bold ${
+                          aiInsights.trainee_performance >= 70 ? 'text-green-600 dark:text-green-400' :
+                          aiInsights.trainee_performance >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
+                          'text-red-600 dark:text-red-400'
+                        }`}>
+                          {Math.round(aiInsights.trainee_performance)}
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">out of 100</p>
+                          <p className="text-sm font-semibold">
+                            {aiInsights.trainee_performance >= 70 ? 'Excellent' :
+                             aiInsights.trainee_performance >= 50 ? 'Good' : 'Needs Work'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Real-time Tips */}
+                {aiInsights.escalation_level > 50 && (
+                  <Card className="bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-600/50">
+                    <CardContent className="pt-4">
+                      <p className="text-xs font-bold text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4" />
+                        SUGGESTION
+                      </p>
+                      <p className="text-xs text-amber-700 dark:text-amber-200">
+                        Guest is still escalated. Try showing more empathy and offering concrete solutions.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {aiInsights.de_escalation_progress > 60 && (
+                  <Card className="bg-emerald-50 dark:bg-emerald-950/30 border-2 border-emerald-600/50">
+                    <CardContent className="pt-4">
+                      <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mb-2 flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4" />
+                        GREAT JOB!
+                      </p>
+                      <p className="text-xs text-emerald-700 dark:text-emerald-200">
+                        You&apos;re doing well! The guest is calming down. Keep up the professional approach.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Pro Tips */}
+                <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-2 border-blue-200 dark:border-blue-800">
+                  <CardContent className="pt-4">
+                    <p className="text-xs font-bold text-blue-600 dark:text-blue-400 mb-2 flex items-center gap-2">
+                      <Lightbulb className="w-4 h-4" />
+                      PRO TIP
+                    </p>
+                    <p className="text-xs leading-relaxed">
+                      <strong>Demonstrate empathy</strong>, communicate clearly, <strong>offer practical solutions</strong>, and maintain professionalism throughout the interaction. Listen actively and respond thoughtfully to the guest&apos;s concerns.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-12 px-6 text-center">
+                <p className="text-muted-foreground">AI insights will appear once the conversation begins...</p>
+              </div>
+            )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

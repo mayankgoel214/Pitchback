@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { Scenario } from '@/lib/types/scenario';
 import { TrainingSession } from '@/lib/types/session';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 interface ScenarioCardProps {
   scenario: Scenario;
@@ -74,12 +76,12 @@ export default function ScenarioCard({ scenario, previousSessions = [] }: Scenar
 
   return (
     <Link href={`/scenarios/${scenario.id}`} className="group">
-      <div className="bg-slate-800 rounded-3xl border-2 border-slate-700 hover:border-[#8B0000] hover:shadow-2xl hover:shadow-[#8B0000]/20 transition-all duration-300 p-7 cursor-pointer relative overflow-hidden transform hover:-translate-y-1">
+      <Card className="rounded-3xl border-2 hover:border-blue-600 hover:shadow-2xl hover:shadow-blue-600/20 transition-all duration-300 p-7 cursor-pointer relative overflow-hidden transform hover:-translate-y-1">
         {/* Gradient Overlay on Hover */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#8B0000]/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-transparent to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
         {/* Decorative Corner Badge */}
-        <div className="absolute -top-12 -right-12 w-32 h-32 bg-gradient-to-br from-[#8B0000]/10 to-transparent rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+        <div className="absolute -top-12 -right-12 w-32 h-32 bg-gradient-to-br from-blue-600/10 to-transparent rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
         {/* Completion Badge */}
         {hasCompleted && bestScore !== null && (
@@ -98,16 +100,16 @@ export default function ScenarioCard({ scenario, previousSessions = [] }: Scenar
           {/* Header */}
           <div className="flex items-start justify-between mb-5">
             <div className="flex items-start gap-4 flex-1">
-              <div className="p-3 bg-gradient-to-br from-slate-100 to-slate-50 group-hover:from-[#8B0000] group-hover:to-[#6B0000] rounded-2xl transition-all duration-300 flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:shadow-[#8B0000]/20 group-hover:scale-110 transform">
+              <div className="p-3 bg-muted group-hover:bg-gradient-to-br group-hover:from-blue-600 group-hover:to-indigo-600 rounded-2xl transition-all duration-300 flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:shadow-blue-600/20 group-hover:scale-110 transform">
                 <div className="group-hover:text-white transition-colors">
                   {categoryIcons[scenario.category]}
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-xl font-bold text-slate-100 mb-1.5 group-hover:text-[#8B0000] transition-colors line-clamp-2">
+                <h3 className="text-xl font-bold mb-1.5 group-hover:text-blue-600 transition-colors line-clamp-2">
                   {scenario.title}
                 </h3>
-                <p className="text-sm text-slate-400 font-medium">
+                <p className="text-sm text-muted-foreground font-medium">
                   {categoryLabels[scenario.category] || scenario.category}
                 </p>
               </div>
@@ -123,32 +125,32 @@ export default function ScenarioCard({ scenario, previousSessions = [] }: Scenar
           </div>
 
           {/* Context Preview */}
-          <p className="text-slate-300 text-sm mb-5 line-clamp-2 leading-relaxed">
+          <p className="text-muted-foreground text-sm mb-5 line-clamp-2 leading-relaxed">
             {scenario.description}
           </p>
 
           {/* Key Competencies */}
           <div className="mb-6">
-            <p className="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wide">Key Competencies:</p>
+            <p className="text-xs font-bold text-muted-foreground mb-3 uppercase tracking-wide">Key Competencies:</p>
             <div className="flex flex-wrap gap-2">
-              <span className="text-xs bg-gradient-to-br from-slate-700 to-slate-800 text-slate-200 px-3 py-2 rounded-xl font-semibold border border-slate-600">
+              <Badge variant="secondary" className="text-xs px-3 py-2 rounded-xl font-semibold">
                 Empathy
-              </span>
-              <span className="text-xs bg-gradient-to-br from-slate-700 to-slate-800 text-slate-200 px-3 py-2 rounded-xl font-semibold border border-slate-600">
+              </Badge>
+              <Badge variant="secondary" className="text-xs px-3 py-2 rounded-xl font-semibold">
                 Communication
-              </span>
-              <span className="text-xs bg-gradient-to-br from-slate-700 to-slate-800 text-slate-200 px-3 py-2 rounded-xl font-semibold border border-slate-600">
+              </Badge>
+              <Badge variant="secondary" className="text-xs px-3 py-2 rounded-xl font-semibold">
                 Problem Solving
-              </span>
-              <span className="text-xs bg-gradient-to-br from-slate-700 to-slate-800 text-slate-200 px-3 py-2 rounded-xl font-semibold border border-slate-600">
+              </Badge>
+              <Badge variant="secondary" className="text-xs px-3 py-2 rounded-xl font-semibold">
                 Professionalism
-              </span>
+              </Badge>
             </div>
           </div>
 
           {/* Footer Info */}
-          <div className="flex justify-between items-center pt-5 border-t-2 border-slate-700">
-            <div className="flex items-center gap-5 text-sm text-slate-400 font-medium">
+          <div className="flex justify-between items-center pt-5 border-t-2">
+            <div className="flex items-center gap-5 text-sm text-muted-foreground font-medium">
               <span className="flex items-center gap-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -162,7 +164,7 @@ export default function ScenarioCard({ scenario, previousSessions = [] }: Scenar
                 {hasCompleted ? `${completedSessions.length} attempt${completedSessions.length > 1 ? 's' : ''}` : 'Up to 10 turns'}
               </span>
             </div>
-            <div className="flex items-center gap-2 text-[#8B0000] group-hover:text-[#6B0000] font-bold text-sm transition-colors">
+            <div className="flex items-center gap-2 text-blue-600 group-hover:text-indigo-600 font-bold text-sm transition-colors">
               <span>{hasCompleted ? 'Practice Again' : 'Begin Training'}</span>
               <svg className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -170,7 +172,7 @@ export default function ScenarioCard({ scenario, previousSessions = [] }: Scenar
             </div>
           </div>
         </div>
-      </div>
+      </Card>
     </Link>
   );
 }

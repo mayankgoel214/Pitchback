@@ -75,7 +75,7 @@ export async function seedDatabase() {
           successCriteria: scenario.success_criteria,
           evaluationRubric: scenario.success_criteria, // Use success_criteria as rubric
           organizationId: null, // Public scenarios
-          isPublic: true,
+          visibility: 'PUBLIC',
         },
       });
       console.log('Created scenario:', scenario.title);
