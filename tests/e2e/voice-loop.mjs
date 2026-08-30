@@ -61,9 +61,35 @@ if (!box) throw new Error('the microphone button was not on the page');
 
 await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
 await page.mouse.down();
-await page.waitForTimeout(300);
-expect('releasing is what sends, not clicking', await page.getByText('Release to send').count() > 0);
-await page.waitForTimeout(1500);
+
+// getUserMedia takes as long as it takes — noticeably longer on a cold CI
+// runner than on a laptop. Wait for the state, not for a guessed duration.
+let recording = true;
+await page
+  .waitForFunction(() => document.body.innerText.includes('Release to send'), {
+    timeout: 20_000,
+  })
+  .catch(() => {
+    recording = false;
+  });
+
+if (!recording) {
+  const banner = await page
+    .locator('[role="alert"]')
+    .first()
+    .innerText()
+    .catch(() => '');
+  expect(
+    'releasing is what sends, not clicking',
+    false,
+    banner ? `the app said: ${banner}` : 'recording never started and nothing was reported',
+  );
+} else {
+  expect('releasing is what sends, not clicking', true);
+}
+
+// Record real audio only once the recorder is actually running.
+await page.waitForTimeout(1800);
 await page.mouse.up();
 
 await page
