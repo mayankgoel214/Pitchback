@@ -13,6 +13,7 @@ import {
   type Competency,
   type Message,
 } from '@/lib/sim/scoring';
+import { LIMITS as AI_LIMITS } from '@/lib/ai/client';
 import { consume, tooMany } from '@/lib/ratelimit';
 
 export const runtime = 'nodejs';
@@ -65,7 +66,11 @@ export const POST = route(async (
   ];
 
   const ended = callEnds(history);
-  const outcome = ended?.reason ?? 'out_of_turns';
+  const repTurns = transcript.filter((m) => m.role === 'rep').length;
+  // Ending the call yourself is not the same as being cut off by the turn
+  // cap, and reporting both as "out of turns" misdescribes what happened.
+  const outcome =
+    ended?.reason ?? (repTurns >= AI_LIMITS.maxTurns ? 'out_of_turns' : 'ended_early');
 
   const byKey = Object.fromEntries(competencies.map((c) => [c.key, c.score]));
 

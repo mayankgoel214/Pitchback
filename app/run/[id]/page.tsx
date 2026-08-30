@@ -42,7 +42,8 @@ const METHOD_LABEL: Record<Competency['method'], string> = {
 const OUTCOME_LINE: Record<string, string> = {
   committed: 'They agreed to a next step.',
   hung_up: 'They hung up.',
-  out_of_turns: 'You ran out of turns.',
+  out_of_turns: 'You used all twelve turns.',
+  ended_early: 'You ended the call.',
 };
 
 export default async function RunPage({ params }: { params: Promise<{ id: string }> }) {
@@ -78,7 +79,8 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
         <div className="mt-4 flex flex-wrap items-center gap-4">
           <StatePill state={run.state as BuyerState} />
           <span className="text-sm text-muted-foreground">
-            {OUTCOME_LINE[run.outcome ?? ''] ?? 'The call ended.'} {run.turns} turns.
+            {OUTCOME_LINE[run.outcome ?? ''] ?? 'The call ended.'} {run.turns}{' '}
+            {run.turns === 1 ? 'turn' : 'turns'}.
           </span>
         </div>
       </header>

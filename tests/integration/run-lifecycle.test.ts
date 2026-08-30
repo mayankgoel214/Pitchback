@@ -291,6 +291,26 @@ withDb('a run, end to end, through Postgres', () => {
     expect(create.mock.calls.length).toBe(callsAfterFirst);
   });
 
+  it('distinguishes ending the call early from running out of turns', async () => {
+    const { runId } = await (
+      await createRun(post('/api/run', { scenarioId: 'pricing' }), undefined)
+    ).json();
+
+    buyerSays('Go on.');
+    await takeTurn(post(`/api/run/${runId}/turn`, { text: 'What is the budget?' }), ctx(runId));
+
+    create.mockResolvedValueOnce({
+      choices: [{ message: { content: JSON.stringify({ score: 20, quote: '', note: 'None.' }) } }],
+    });
+    const graded = await (
+      await gradeRun(post(`/api/run/${runId}/grade`), ctx(runId))
+    ).json();
+
+    // One turn used out of twelve — the cap was nowhere near reached.
+    expect(graded.outcome).toBe('ended_early');
+    expect(graded.outcome).not.toBe('out_of_turns');
+  });
+
   it('refuses to grade a run in which nobody said anything', async () => {
     const { runId } = await (
       await createRun(post('/api/run', { scenarioId: 'pricing' }), undefined)

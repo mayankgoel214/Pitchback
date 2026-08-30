@@ -29,6 +29,7 @@ export function CallSurface({ scenario }: { scenario: Scenario }) {
 
   const loop = useVoiceLoop(runId, scenario.id);
   const feedRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const state: BuyerState = loop.state ?? scenario.openingState;
   const busy = loop.phase !== 'idle' && loop.phase !== 'error';
@@ -38,6 +39,13 @@ export function CallSurface({ scenario }: { scenario: Scenario }) {
   useEffect(() => {
     feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: 'smooth' });
   }, [loop.exchanges.length, loop.phase]);
+
+  // The input is disabled while the buyer answers, which drops focus. Without
+  // putting it back, every turn after the first needs a fresh click before
+  // Enter does anything.
+  useEffect(() => {
+    if (typing && !busy) inputRef.current?.focus();
+  }, [typing, busy, loop.exchanges.length]);
 
   async function start() {
     setStarting(true);
@@ -190,6 +198,7 @@ export function CallSurface({ scenario }: { scenario: Scenario }) {
                   className="flex flex-wrap items-center gap-3"
                 >
                   <input
+                    ref={inputRef}
                     autoFocus
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
