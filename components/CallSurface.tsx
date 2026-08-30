@@ -24,6 +24,8 @@ export function CallSurface({ scenario }: { scenario: Scenario }) {
   const [startError, setStartError] = useState<string | null>(null);
   const [openingLine, setOpeningLine] = useState<string | null>(null);
   const [ending, setEnding] = useState(false);
+  const [typing, setTyping] = useState(false);
+  const [draft, setDraft] = useState('');
 
   const loop = useVoiceLoop(runId, scenario.id);
   const feedRef = useRef<HTMLDivElement>(null);
@@ -118,8 +120,9 @@ export function CallSurface({ scenario }: { scenario: Scenario }) {
                 {' · '}
                 {x.trigger}
                 {x.constrained && ' · constrained by the state machine'}
-                {' · '}
-                {x.latencyMs} ms
+                {/* Typed turns skip speech-to-text, so there is no round trip
+                    to report. Showing "0 ms" would read as a measurement. */}
+                {x.latencyMs > 0 && ` · ${x.latencyMs} ms`}
               </p>
             </div>
           ))}
@@ -174,40 +177,103 @@ export function CallSurface({ scenario }: { scenario: Scenario }) {
               </span>
             </div>
           ) : (
-            <div className="flex flex-wrap items-center gap-4">
-              <button
-                onMouseDown={loop.startRecording}
-                onMouseUp={loop.stopRecording}
-                onMouseLeave={() => loop.phase === 'recording' && loop.stopRecording()}
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  loop.startRecording();
-                }}
-                onTouchEnd={(e) => {
-                  e.preventDefault();
-                  loop.stopRecording();
-                }}
-                disabled={busy && loop.phase !== 'recording'}
-                className={`rounded-full px-8 py-4 text-sm font-medium transition-all disabled:opacity-40 ${
-                  loop.phase === 'recording'
-                    ? 'bg-destructive text-white'
-                    : 'bg-foreground text-background hover:opacity-90'
-                }`}
-              >
-                {loop.phase === 'recording' ? 'Release to send' : 'Hold to talk'}
-              </button>
+            <div className="space-y-4">
+              {typing ? (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const text = draft.trim();
+                    if (!text) return;
+                    setDraft('');
+                    loop.sendText(text);
+                  }}
+                  className="flex flex-wrap items-center gap-3"
+                >
+                  <input
+                    autoFocus
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    // Implicit form submission on Enter is not reliable here,
+                    // so send it explicitly. Enter is what anyone typing a
+                    // reply will reach for first.
+                    onKeyDown={(e) => {
+                      if (e.key !== 'Enter' || e.shiftKey) return;
+                      e.preventDefault();
+                      const text = draft.trim();
+                      if (!text || busy) return;
+                      setDraft('');
+                      loop.sendText(text);
+                    }}
+                    disabled={busy}
+                    placeholder="Say something to them…"
+                    aria-label="Your turn"
+                    className="min-w-0 flex-1 rounded-full border border-border bg-card px-5 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-foreground/40 disabled:opacity-50"
+                  />
+                  <button
+                    type="submit"
+                    disabled={busy || !draft.trim()}
+                    className="rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-40"
+                  >
+                    Send
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTyping(false)}
+                    className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                  >
+                    Use the mic
+                  </button>
+                </form>
+              ) : (
+                <div className="flex flex-wrap items-center gap-4">
+                  <button
+                    onMouseDown={loop.startRecording}
+                    onMouseUp={loop.stopRecording}
+                    onMouseLeave={() => loop.phase === 'recording' && loop.stopRecording()}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      loop.startRecording();
+                    }}
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      loop.stopRecording();
+                    }}
+                    disabled={busy && loop.phase !== 'recording'}
+                    className={`rounded-full px-8 py-4 text-sm font-medium transition-all disabled:opacity-40 ${
+                      loop.phase === 'recording'
+                        ? 'bg-destructive text-white'
+                        : 'bg-foreground text-background hover:opacity-90'
+                    }`}
+                  >
+                    {loop.phase === 'recording' ? 'Release to send' : 'Hold to talk'}
+                  </button>
 
-              <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                {PHASE_LABEL[loop.phase]}
-              </span>
+                  <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+                    {PHASE_LABEL[loop.phase]}
+                  </span>
 
-              <button
-                onClick={endCall}
-                disabled={ending || loop.exchanges.length === 0}
-                className="ml-auto text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-40"
-              >
-                {ending ? 'Scoring…' : 'End the call'}
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => setTyping(true)}
+                    className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                  >
+                    Type instead
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-4">
+                <p className="font-mono text-[11px] text-muted-foreground">
+                  {loop.turnsAllowed - loop.turnsUsed} turns left
+                </p>
+                <button
+                  onClick={endCall}
+                  disabled={ending || loop.exchanges.length === 0}
+                  className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-40"
+                >
+                  {ending ? 'Scoring…' : 'End the call'}
+                </button>
+              </div>
             </div>
           )}
         </div>

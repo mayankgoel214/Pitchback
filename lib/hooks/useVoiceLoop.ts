@@ -130,6 +130,64 @@ export function useVoiceLoop(runId: string | null, scenarioId: string) {
     [fetchSpeech, play],
   );
 
+  /**
+   * Send a turn as text instead of speech.
+   *
+   * Not a debug hatch — plenty of people cannot use a microphone, or are
+   * sitting somewhere they cannot talk out loud, and the exercise still
+   * works for them. Latency is deliberately not sampled here, because this
+   * path skips speech-to-text and would flatter the numbers on the results
+   * page.
+   */
+  const sendText = useCallback(
+    async (text: string) => {
+      if (!runId || !text.trim()) return;
+      setError(null);
+      setPhase('thinking');
+
+      try {
+        const turnRes = await fetch(`/api/run/${runId}/turn`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: text.trim() }),
+        });
+        if (!turnRes.ok) {
+          setPhase('error');
+          setError(await readError(turnRes));
+          return;
+        }
+        const turn = await turnRes.json();
+
+        setExchanges((prev) => [
+          ...prev,
+          {
+            rep: text.trim(),
+            buyer: turn.reply,
+            state: turn.state,
+            trigger: turn.transition.trigger,
+            constrained: turn.transition.constrained,
+            latencyMs: 0,
+          },
+        ]);
+        setState(turn.state);
+        setTurnsUsed(turn.turnsUsed);
+        setTurnsAllowed(turn.turnsAllowed);
+        setEnded(turn.ended ?? null);
+
+        const speech = await fetchSpeech(turn.reply);
+        if (speech) {
+          setPhase('speaking');
+          await play(speech);
+        }
+        setPhase('idle');
+      } catch (e) {
+        setPhase('error');
+        setError(e instanceof Error ? e.message : 'Something went wrong on that turn.');
+      }
+    },
+    [runId, fetchSpeech, play],
+  );
+
   const startRecording = useCallback(async () => {
     setError(null);
     try {
@@ -253,5 +311,5 @@ export function useVoiceLoop(runId: string | null, scenarioId: string) {
     ended,
   };
 
-  return { ...loop, startRecording, stopRecording, speakOpening, setError };
+  return { ...loop, startRecording, stopRecording, sendText, speakOpening, setError };
 }

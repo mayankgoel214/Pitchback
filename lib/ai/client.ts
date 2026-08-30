@@ -41,7 +41,13 @@ export function openai(): OpenAI {
         'this is a configuration failure, not a degraded mode.',
     );
   }
-  if (!client) client = new OpenAI({ apiKey });
+  // Points at any OpenAI-compatible endpoint. Left configurable so the app
+  // can be driven end to end against a stub during development without
+  // spending money, and so a compatible proxy or gateway can be swapped in.
+  // Unset in production, where it defaults to OpenAI itself.
+  const baseURL = process.env.OPENAI_BASE_URL || undefined;
+
+  if (!client) client = new OpenAI({ apiKey, baseURL });
   return client;
 }
 

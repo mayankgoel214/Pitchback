@@ -8,6 +8,31 @@ import { StatePill, stateColor } from '@/components/StateLadder';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * A run page is somebody's own result, reachable by anyone holding the id.
+ * It gets its own title so a bookmark is not just "Pitchback", and it is
+ * kept out of search results because a stranger's practice call has no
+ * business being indexed.
+ */
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const run = await prisma.run.findUnique({
+    where: { id },
+    select: { scenarioId: true, overall: true },
+  });
+
+  const scenario = run ? getScenario(run.scenarioId) : undefined;
+
+  return {
+    title: scenario ? `${scenario.title} — your run — Pitchback` : 'Your run — Pitchback',
+    description:
+      run?.overall === null || run?.overall === undefined
+        ? 'A Pitchback practice run.'
+        : `Scored ${run.overall} overall across discovery, talk-to-listen, objection handling and the close.`,
+    robots: { index: false, follow: false },
+  };
+}
+
 const METHOD_LABEL: Record<Competency['method'], string> = {
   computed: 'computed',
   state_machine: 'state machine',
