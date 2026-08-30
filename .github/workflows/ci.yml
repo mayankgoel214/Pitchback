@@ -32,9 +32,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Pinned to the version the lockfile was generated with. npm 10 and
+      # npm 11 disagree about esbuild's optional platform packages, and the
+      # mismatch shows up only as `npm ci` claiming they are missing.
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 26
           cache: npm
 
       - run: npm ci
