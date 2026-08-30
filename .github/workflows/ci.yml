@@ -57,3 +57,56 @@ jobs:
 
       - name: Build
         run: npx next build
+
+  voice-loop:
+    # The microphone path is the one thing unit tests cannot reach:
+    # getUserMedia, MediaRecorder, the multipart upload, and the latency
+    # clock. Chromium supplies a synthetic capture device, and the model
+    # provider is stubbed, so this costs nothing at OpenAI.
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pitchback
+          POSTGRES_PASSWORD: pitchback
+          POSTGRES_DB: pitchback
+        ports: ['55432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://pitchback:pitchback@localhost:55432/pitchback
+      OPENAI_API_KEY: stub-not-real
+      OPENAI_BASE_URL: http://localhost:4599/v1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npx prisma migrate deploy
+
+      - run: npx next build
+
+      - name: Start the stub model
+        run: node tests/e2e/stub-model.mjs &
+
+      - name: Start the app
+        run: |
+          npx next start -p 3111 &
+          npx wait-on http://localhost:3111 --timeout 60000
+
+      - name: Voice loop
+        run: npm run test:e2e -- http://localhost:3111

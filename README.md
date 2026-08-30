@@ -109,6 +109,33 @@ npm run typecheck
 npm run lint
 ```
 
+Integration tests run against a real Postgres, not an in-memory double — a
+store that cannot round-trip its own JSON columns fails only in production.
+Start one and point `DATABASE_URL` at it:
+
+```bash
+docker run -d --name pitchback-pg \
+  -e POSTGRES_USER=pitchback -e POSTGRES_PASSWORD=pitchback -e POSTGRES_DB=pitchback \
+  -p 55432:5432 postgres:16-alpine
+```
+
+### The voice loop
+
+`getUserMedia`, `MediaRecorder`, the multipart upload and the latency clock
+are the parts no unit test can reach, so there is a browser test that drives
+them with a synthetic capture device — no microphone, no human, and no money
+spent at the model provider:
+
+```bash
+node tests/e2e/stub-model.mjs &
+OPENAI_API_KEY=stub-not-real OPENAI_BASE_URL=http://localhost:4599/v1 npm run dev &
+npm run test:e2e -- http://localhost:3111
+```
+
+The stub returns canned replies and a silent mp3. It proves the plumbing and
+nothing about model quality, and the latency it reports is the app's own
+overhead with the network and the models removed — not a figure to quote.
+
 ## Layout
 
 ```
