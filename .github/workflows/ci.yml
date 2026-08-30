@@ -96,6 +96,17 @@ jobs:
 
       - run: npx playwright install --with-deps chromium
 
+      # Chromium's fake capture device still needs an audio stack beneath it.
+      # Without one, getUserMedia({ audio: true }) raises NotFoundError and
+      # the microphone path cannot be exercised at all.
+      - name: Provide a virtual sound device
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pulseaudio
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=virtual
+          pactl list short sources
+
       - run: npx prisma migrate deploy
 
       - run: npx next build
