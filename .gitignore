@@ -52,3 +52,6 @@ nul
 .playwright-mcp/
 
 certificates
+# Demo capture intermediates. The finished video (docs/pitchback-demo.mp4)
+# is committed; the frames it was built from are not.
+docs/demo-frames/
