@@ -205,11 +205,21 @@ export function useVoiceLoop(runId: string | null, scenarioId: string) {
       setPhase('recording');
     } catch (e) {
       setPhase('error');
-      setError(
-        e instanceof DOMException && e.name === 'NotAllowedError'
-          ? 'Microphone access was blocked. Allow it in your browser and reload.'
-          : 'Could not start recording. Your browser may not support it.',
-      );
+
+      // Only the permission case gets a friendly rewrite, because it is the
+      // one a visitor can actually fix. Everything else reports what the
+      // browser said — collapsing them all into "your browser may not
+      // support it" is a guess, and it hides the cause from the person best
+      // placed to act on it.
+      if (e instanceof DOMException && e.name === 'NotAllowedError') {
+        setError('Microphone access was blocked. Allow it in your browser and reload.');
+      } else if (e instanceof DOMException && e.name === 'NotFoundError') {
+        setError('No microphone was found. Plug one in, or use "Type instead".');
+      } else {
+        const detail = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+        setError(`Could not start recording — ${detail}`);
+        console.error('startRecording failed', e);
+      }
     }
   }, []);
 
