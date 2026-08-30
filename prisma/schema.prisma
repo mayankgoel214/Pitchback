@@ -3,105 +3,75 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model Organization {
-  id              String           @id @default(cuid())
-  name            String
-  type            String           // hotel, restaurant, resort, etc.
-  inviteCode      String?          @unique // Optional invite code for joining
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  users           User[]
-  scenarios       Scenario[]
-  trainingSessions TrainingSession[]
+/// A completed practice run. Anonymous by construction — there are no
+/// accounts, and nothing here identifies the person who did it. Stored so
+/// the landing page can report real aggregates instead of invented ones.
+model Run {
+  id         String   @id @default(cuid())
+  scenarioId String   @map("scenario_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  /// The conversation so far. Held server-side rather than relayed by the
+  /// client, so a run's scores cannot be forged by editing a request body.
+  /// Shape: { role: "rep" | "buyer", text: string }[]
+  transcript Json @default("[]")
+
+  /// Every state machine transition, in order, with its trigger.
+  stateHistory Json   @default("[]") @map("state_history")
+  /// Current rung of the buyer receptivity ladder.
+  state        String
+
+  /// Round-trip latency samples for this run, in milliseconds: recording
+  /// stopped to buyer audio ready. Shape: number[]
+  latencies Json @default("[]")
+
+  // --- set once the run is graded ---
+  completedAt DateTime? @map("completed_at")
+  /// How the call ended: "committed", "hung_up", or "out_of_turns".
+  outcome     String?
+  turns       Int       @default(0)
+
+  discovery         Int?
+  talkListen        Int? @map("talk_listen")
+  objectionHandling Int? @map("objection_handling")
+  nextStep          Int? @map("next_step")
+  overall           Int?
+
+  /// The four scored competencies with the reasoning shown to the user, so
+  /// a result page can be re-rendered without paying the grader again.
+  competencies Json?
+
+  @@index([createdAt])
+  @@index([scenarioId])
+  @@index([completedAt])
+  @@map("runs")
 }
 
-model User {
-  id              String           @id // Firebase UID
-  email           String           @unique
-  name            String
-  role            String           // trainee, trainer, admin
-  isOrgAdmin      Boolean          @default(false) // Can manage org and create org-wide scenarios
-  organizationId  String
-  organization    Organization     @relation(fields: [organizationId], references: [id])
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  trainingSessions TrainingSession[]
-  createdScenarios Scenario[]      @relation("ScenarioCreator")
+/// Fixed-window rate limiting. Kept in Postgres rather than in process
+/// memory because every serverless instance has its own memory, and a
+/// per-instance limit on a paid endpoint is not a limit at all.
+model RateLimitWindow {
+  /// Hashed client identifier plus the endpoint being limited.
+  key       String   @id
+  count     Int      @default(0)
+  expiresAt DateTime @map("expires_at")
+
+  @@index([expiresAt])
+  @@map("rate_limit_windows")
 }
 
-model Scenario {
-  id                    String           @id @default(cuid())
-  title                 String
-  description           String
-  difficulty            String           // beginner, intermediate, advanced
-  category              String           // check-in, complaint, concierge, room-service
-  scenarioType          String           // front-desk, restaurant, etc.
-  aiGuestPersona        String           @map("ai_guest_persona")
-  aiGuestOpening        String           @map("ai_guest_opening")
-  contextBackground     String           @map("context_background")
-  successCriteria       Json             @map("success_criteria")
-  evaluationRubric      Json             @map("evaluation_rubric")
-  organizationId        String?
-  organization          Organization?    @relation(fields: [organizationId], references: [id])
-  visibility            String           @default("PRIVATE") // PUBLIC, ORGANIZATION, PRIVATE
-  createdById           String?          @map("created_by_id") // Firebase UID of creator
-  createdBy             User?            @relation("ScenarioCreator", fields: [createdById], references: [id])
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
-  trainingSessions      TrainingSession[]
+/// Cached text-to-speech audio. The buyer's opening line for a scenario is
+/// identical on every run, so it should be synthesised once, not once per
+/// visitor.
+model SpeechCache {
+  /// Hash of voice + model + text.
+  key       String   @id
+  audio     Bytes
+  createdAt DateTime @default(now()) @map("created_at")
 
-  @@index([visibility])
-  @@index([organizationId])
-  @@index([createdById])
-}
-
-model TrainingSession {
-  id                    String                @id @default(cuid())
-  traineeId             String                @map("trainee_id")
-  trainee               User                  @relation(fields: [traineeId], references: [id])
-  scenarioId            String                @map("scenario_id")
-  scenario              Scenario              @relation(fields: [scenarioId], references: [id])
-  organizationId        String                @map("organization_id")
-  organization          Organization          @relation(fields: [organizationId], references: [id])
-  status                String                @default("in_progress") // in_progress, completed, abandoned
-  startedAt             DateTime              @default(now()) @map("started_at")
-  completedAt           DateTime?             @map("completed_at")
-  durationMs            Int?                  @map("duration_ms")
-  conversationMessages  ConversationMessage[]
-  evaluation            Evaluation?
-  emotionHistory        Json?                 @map("emotion_history")
-  createdAt             DateTime              @default(now())
-  updatedAt             DateTime              @updatedAt
-}
-
-model ConversationMessage {
-  id                String          @id @default(cuid())
-  sessionId         String          @map("session_id")
-  session           TrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  turn              Int
-  speaker           String          // trainee, ai_guest
-  text              String
-  audioUrl          String?         @map("audio_url")
-  durationMs        Int?            @map("duration_ms")
-  timestamp         DateTime        @default(now())
-  emotionState      String?         @map("emotion_state")
-
-  @@index([sessionId])
-}
-
-model Evaluation {
-  id                String          @id @default(cuid())
-  sessionId         String          @unique @map("session_id")
-  session           TrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  overallScore      Float           @map("overall_score")
-  competencyScores  Json            @map("competency_scores")
-  strengths         Json
-  areasForImprovement Json          @map("areas_for_improvement")
-  detailedFeedback  String          @map("detailed_feedback")
-  passed            Boolean
-  createdAt         DateTime        @default(now())
+  @@map("speech_cache")
 }

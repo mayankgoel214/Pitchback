@@ -112,6 +112,38 @@
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
+/*
+ * Pitchback runs dark only, on purpose. The whole screen is one live
+ * readout during a call, and a light theme turns the state ramp below into
+ * pastel mush.
+ */
+.dark {
+  --background: oklch(0.16 0.008 60);
+  --foreground: oklch(0.96 0.004 80);
+  --card: oklch(0.2 0.009 60);
+  --card-foreground: oklch(0.96 0.004 80);
+  --muted: oklch(0.26 0.009 60);
+  --muted-foreground: oklch(0.68 0.012 70);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 12%);
+}
+
+/*
+ * The buyer receptivity ramp. Seven stops, one per state, running from
+ * resistance to commitment. This is a diverging scale with a deliberately
+ * desaturated middle: `neutral` should read as "nothing is happening yet",
+ * not as a third colour competing with the two ends.
+ */
+:root {
+  --state-hostile: oklch(0.58 0.19 25);
+  --state-dismissive: oklch(0.64 0.15 42);
+  --state-skeptical: oklch(0.72 0.12 72);
+  --state-neutral: oklch(0.62 0.01 80);
+  --state-curious: oklch(0.72 0.1 168);
+  --state-interested: oklch(0.68 0.14 158);
+  --state-committed: oklch(0.7 0.17 148);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

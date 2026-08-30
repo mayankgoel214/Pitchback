@@ -18,6 +18,10 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      // Quarantined hackathon scaffolding: Firebase auth, the org layer, the
+      // old hotel engine. Not imported by anything and not part of the
+      // build. Pending deletion — see README.
+      "legacy/**",
     ],
   },
 ];
