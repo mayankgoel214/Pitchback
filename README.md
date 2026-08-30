@@ -136,6 +136,14 @@ The stub returns canned replies and a silent mp3. It proves the plumbing and
 nothing about model quality, and the latency it reports is the app's own
 overhead with the network and the models removed — not a figure to quote.
 
+**Run this locally.** GitHub's runners have no audio input device at all, and
+Chromium's fake capture device does not create one (a pulseaudio null sink was
+tried; it provides an output, not a source). On a machine without one the test
+skips the microphone assertions, prints exactly what went uncovered, and falls
+through to the typed path. So CI covers the call loop, the state machine and
+the scoring, while `MediaRecorder` and the upload to `/api/transcribe` are
+covered here.
+
 ## Layout
 
 ```
