@@ -4,7 +4,18 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+
+  // Pooled connection (PgBouncer, port 6543 on Supabase). Every request-time
+  // query goes through here, because serverless opens far more connections
+  // than Postgres will hold.
+  url = env("DATABASE_URL")
+
+  // Direct connection (port 5432). Migrations need it: PgBouncer's
+  // transaction pooling cannot run the advisory locks and prepared
+  // statements a migration uses, and the failure looks like a network fault
+  // rather than a configuration one. Optional — falls back to `url` when
+  // unset, which is what the local Docker setup does.
+  directUrl = env("DIRECT_URL")
 }
 
 /// A completed practice run. Anonymous by construction — there are no

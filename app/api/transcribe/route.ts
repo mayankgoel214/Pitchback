@@ -63,9 +63,23 @@ export const POST = route(async (req: Request) => {
 
   const text = result.text?.trim() ?? '';
 
+  // Whisper does not return an empty string for silence — it hallucinates a
+  // short stock phrase, most often "you", and does so consistently (measured
+  // 2026-09-09: digital silence returned "you" on five runs out of five, at
+  // both 1s and 8s). Passing that through would put a word the user never
+  // said into the transcript, let the buyer respond to it, and let it reach
+  // the score. These are treated as silence, which is what they are.
+  const artefact = text
+    .toLowerCase()
+    .replace(/[.!?,\s]/g, '');
+  const SILENCE_ARTEFACTS = new Set([
+    '', 'you', 'thankyou', 'thanksforwatching', 'thankyouforwatching',
+    'bye', 'byebye', 'sohello', 'uh', 'um',
+  ]);
+
   // An empty transcription is a real outcome — the mic picked up nothing.
   // Report it as such rather than passing an empty turn to the buyer.
-  if (!text) {
+  if (!text || SILENCE_ARTEFACTS.has(artefact)) {
     return NextResponse.json(
       { error: 'no_speech', message: 'Nothing was picked up. Check your microphone and try again.' },
       { status: 422 },
